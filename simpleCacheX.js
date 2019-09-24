@@ -4,15 +4,15 @@
  * * Build by `EagleX Technologies.`
  * * A Local to file data store, for testing purposes only
  * * In live environment this is not save or desirable, you may want to use `Redis` or your database for holding temp data information
- * * files are stored as per setting in `cacheDir`
+ * * files are stored as per setting in `./cache` dir
  * * every file is appended with {fileName}_cache_{timestamp}.json
  * ps: credits always welcome: `eaglex.net`
  */
 
 /**
- * example useage
+ * example usage
 
- var simpleCache = require('./libs/simpleCache/simpleCache')()
+ var simpleCache = require('./simpleCacheX')()
     sc = new simpleCache(0.2, true)
     sc.write('test_file', { a: 0, b: 0, c: 9 })
     var l = sc.load('test_file')

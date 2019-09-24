@@ -3,7 +3,7 @@
 * License: `CC BY` 
 
 ### About
-* Simple cache that can be adapted by any application in local root, for server testing or any purpose. Cache is being saved in `./cache` dir.
+* Simple cache that can be adapted by any application, for server testing or any purpose. Cache is being saved in `./cache` dir.
 
 ##### Methods
 * `getAll()` : Read all available cache before expires
@@ -11,11 +11,13 @@
 * `update(fileName, data)` : Update/ and return existing cache, in a new file with new timestamp
 * `load(fileName)` : Load latest (by timestamp) cache before if exists.
 
+- `data` : Data can be a string, array, or object
+- `fileName` : name cannot include any file extension, or underscore
 - `debug:Boolean` : You can enable debug to see any errors or warnings
 - `expire:Number`: Set your expire time, default is 1 hour.
 
 #### Cache
-* cache is being saved in `./cache` dir every new file is appended with timestamp, old files files depending on `expire` setting are being recycled. If you update your cache, it will be created in a new file together with new information, the old file will still exist - and will be recycled after expiry. Cache expiry is tested every time the app runs.
+* cache is being saved in `./cache` dir every new file is appended with timestamp, old files files depending on `expire` setting are being recycled. If you update your cache, it will be created in a new file together with new information, the old file will still exist - and will be recycled after expiry. Cache expiry is tested every time the app runs.  example full file path `bankData_cache_1569331380306.json`
 
 
 ###### Installation:

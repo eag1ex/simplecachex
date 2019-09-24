@@ -6,7 +6,7 @@
 
 ##### Methods
 * `getAll()` : Read all available cache before expires
-* `write(fileName, data)` : Write new cache, with timestamp 
+* `write(fileName, data):void` : Write new cache, with timestamp 
 * `update(fileName, data)` : Update/ and return existing cache, in a new file with new timestamp
 * `load(fileName)` : Load latest (by timestamp) cache before if exists.
 
@@ -15,6 +15,7 @@
 
 #### Cache
 * cache is being saved in `./cache` dir every new file is appended with timestamp, old files files depending on `expire` setting are being recycled. If you update your cache, it will be created in a new file together with new information, the old file will still exist - and will be recycled after expiry. Cache expiry is tested every time the app runs.
+
 
 
 ###### Installation:

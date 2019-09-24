@@ -1,6 +1,7 @@
 /**
  * @SimpleCacheX
  * * Version : 1.0.0
+ * * License: `CC BY`
  * * Build by `EagleX Technologies.`
  * * A Local to file data store, for testing purposes only
  * * In live environment this is not save or desirable, you may want to use `Redis` or your database for holding temp data information

@@ -1,5 +1,6 @@
 ## Simple CacheX
 * By `EagleX`
+* License: `CC BY` 
 
 ### About
 * Simple cache that can be adapted by any application in local root, for server testing or any purpose. Cache is being saved in `./cache` dir.

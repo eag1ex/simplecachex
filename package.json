@@ -1,0 +1,21 @@
+{
+  "name": "simplecachex",
+  "version": "1.0.0",
+  "description": "",
+  "main": "simpleCacheX.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bash-color": "0.0.4",
+    "eslint": "^6.4.0",
+    "fs": "0.0.1-security",
+    "lodash": "^4.17.15",
+    "moment": "^2.24.0",
+    "path": "^0.12.7",
+    "standard": "^14.3.1",
+    "util": "^0.12.1"
+  }
+}

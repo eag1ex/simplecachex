@@ -25,7 +25,7 @@
 * `node index`
 
 ### Example usage:
-``
+```
 const SimpleCache = require('./simpleCacheX')()
 var expire = 0.1 // 10min
 var debug = true // display any warnings
@@ -45,7 +45,7 @@ var cache = sc.load(fName) // load cache data
 
 // look at `./index.js` for more examples. 
 
-``
+```
 
 ###### Other
 * Have questions, or would like to submit feedback, `contact me at: https://eaglex.net/app/contact?product=SimpleCacheX`

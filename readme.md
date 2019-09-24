@@ -1,5 +1,5 @@
 ## Simple CacheX
-* By `EagleX`
+* By [EagleX](http://eaglex.net) 
 * License: `CC BY` 
 
 ### About

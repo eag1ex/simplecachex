@@ -18,12 +18,11 @@
 * cache is being saved in `./cache` dir every new file is appended with timestamp, old files files depending on `expire` setting are being recycled. If you update your cache, it will be created in a new file together with new information, the old file will still exist - and will be recycled after expiry. Cache expiry is tested every time the app runs.
 
 
-
 ###### Installation:
 * `npm i`
 
-###### Start App
-* `node simpleCacheX`
+###### Start/test App
+* `node index`
 
 ### Example usage:
 ``

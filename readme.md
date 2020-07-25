@@ -23,8 +23,7 @@
 ###### Installation:
 * `npm i`
 
-###### Start/test App
-* `node index`
+
 
 ### Example usage:
 ```
@@ -45,7 +44,7 @@ var newData = [{bankName:'China Bank', assets:10000}]  // will update existing `
 var cache = sc.update(fName,newData)
 var cache = sc.load(fName) // load cache data
 
-// look at `./index.js` for more examples. 
+// look at `./example.js` for more examples. 
 
 ```
 

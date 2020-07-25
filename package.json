@@ -1,21 +1,25 @@
 {
   "name": "simplecachex",
   "version": "1.0.0",
-  "description": "",
-  "main": "simpleCacheX.js",
+  "description": "write cache to file",
+  "main": "index.js",
   "scripts": {
+    "lint": "./node_modules/.bin/eslint  --ext .js libs",
+    "lint:fix": "./node_modules/.bin/eslint --fix --ext .js libs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bash-color": "0.0.4",
     "eslint": "^6.4.0",
-    "fs": "0.0.1-security",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
-    "path": "^0.12.7",
-    "standard": "^14.3.1",
-    "util": "^0.12.1"
+    "x-utils-es": "^1.3.1"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.3.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-standard": "^4.0.1"
   }
 }

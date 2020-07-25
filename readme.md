@@ -17,7 +17,7 @@
 - `expire:Number`: Set your expire time, default is 1 hour.
 
 #### Cache
-* cache is being saved in `./cache` dir every new file is appended with timestamp, old files depending on `expire` setting are recycled. If you update your cache, it will be created in a new file together with new information, the old file will still exist - but will be recycled after expiry. Cache expiry is tested every time the app runs.  Example file path `./cache/bankData_cache_1569331380306.json`
+* cache is being saved in `./cache` dir every new file is appended with timestamp, old files depending on `expire` setting are recycled. If you update your cache, it will be created in a new file together with new information, the old file will still exist - but will be recycled after expiry. Cache expiry is tested every time the app runs. Example file path `./cache/bankData_cache_1569331380306.json`
 
 
 ###### Installation:

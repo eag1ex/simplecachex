@@ -1,36 +1,82 @@
 {
     "jslint.enable": false,
-    "sasslint.enable":true,
-    "eslint.validate": [ "javascript", "javascriptreact", { "language": "html", "autoFix": true } ],
+    "standard.enable":true,
+    "eslint.nodePath":"./node_modules/eslint",
+    "node-module-intellisense.scanBuiltinModules": true,
+    "node-module-intellisense.scanDevDependencies": true,
+    "node-module-intellisense.scanFileModules": true,
+    "node-module-intellisense.fileModuleExtensions": [
+        ".js",
+        ".jsx",
+        ".ts",
+        ".d.ts",
+        ".tsx",
+        ".vue",
+        ".json"
+      ],
+    "eslint.enable": true,
     "eslint.autoFixOnSave":true,
-    "cSpell.enabled": true,
-    "cSpell.language":"en",
-    "peacock.affectActivityBar": true,
-    "peacock.affectStatusBar": true,
-    "peacock.affectTitleBar": true,
-    "eslint.options": { "configFile": "eslintrc.json" },
-    "peacock.elementAdjustments": {
-      "activityBar": "lighten"
+    "javascript.validate.enable":true,
+    "javascript.format.enable": true,
+    "eslint.codeAction.showDocumentation":{
+        "enable": true
+    },
+    "eslint.validate": [
+        "javascript",
+        "javascriptreact",
+        {
+            "language": "html",
+            "autoFix": true
+        }
+    ],
+    "editor.wordWrap": "on",
+    "beautify.language": {
+        "js": {
+            "type": [
+                "javascript"
+            ],
+            "filename": [
+                ".jshintrc",
+                ".jsbeautifyrc"
+            ]
+        },
+        "css": [
+            "css",
+            "scss"
+        ],
+        "html": [
+            "htm",
+            "html"
+        ]
+        // ^^ providing just an array sets the VS Code file type
     },
     "standard.options": {
-        "globals": ["$", "jQuery", "fetch"],
+        "globals": [
+            "$",
+            "jQuery",
+            "fetch"
+        ],
         "ignore": [
             "node_modules/**"
         ],
-        "plugins": ["html"],
+        "plugins": [
+            "html"
+        ],
         "parser": "babel-eslint",
-        "envs": ["jest"]
+        "envs": [
+            "jest"
+        ]
     },
     "standard.validate": [
         "javascript",
-        "javascriptreact",
         "html"
     ],
-
-    "files.associations": {
-        "*.vue": "html"
+    "peacock.elementAdjustments": {
+        "activityBar": "lighten"
     },
-
+    "peacock.affectActivityBar": true,
+    "peacock.affectStatusBar": true,
+    "peacock.affectTitleBar": true,
     "peacock.favoriteColors": [
         {
             "name": "Angular Red",
@@ -105,9 +151,5 @@
         ": ",
         " - "
     ],
-    "spellright.documentTypes": [
-        "markdown",
-        "latex",
-        "plaintext"
-    ]
+    "typescript.validate.enable": false
 }

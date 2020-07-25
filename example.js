@@ -1,6 +1,6 @@
 
 const {log} = require('x-utils-es/umd')
-const SimpleCache = require('./libs/simpleCacheX')()
+const SimpleCache = require('./index')()
 
 var expire = -1 // 0.1 === 10min
 var debug = false // display any warnings

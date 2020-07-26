@@ -69,7 +69,6 @@ module.exports = () => {
 
                 let forwardTime = (Number(v) * 60 * 60 * 1000)
                 newTime = new Date(Date.now() + forwardTime).getTime()
-
             }
 
             let valid = moment(newTime).isValid()
@@ -119,7 +118,7 @@ module.exports = () => {
                 let timestamp = this.fileTimeStamp(file)
                 if (fileList.indexOf(timestamp) !== -1) {
                     this.removeIt(file)
-                    log(`removed by limit`, file)
+                   // log(`removed by limit`, file)
                 }
             })
             return this
@@ -233,7 +232,7 @@ module.exports = () => {
          * * file written in format: {fileName}_cache_{timestamp}.json
          * return boolean
          */
-        write(fileName, data, _type=null) {
+        write(fileName, data) {
             if (this.errHandler(fileName, 'write')) return false
             if (isEmpty(data)) {
                 if (this.debug) log('write data must be set')
@@ -241,10 +240,16 @@ module.exports = () => {
             }
 
             // NOTE only delete files by limit when calling `write` method directly and  `autoDeleteLimit` is larger then 0
-            if (!_type) this.fileLimit(this.autoDeleteLimit, true)
+            this.fileLimit(this.autoDeleteLimit, true)
 
-            const newFile = path.join(this.cacheDir, `${fileName}_cache_${this.expire}.json`)
+            let newFile = path.join(this.cacheDir, `${fileName}_cache_${this.expire}.json`)
+            //NOTE  if file already exists make sure when writing regenerage expire date
+            if(fs.existsSync(newFile)){
+                this.expire = Object.assign({},this.expire)
+                newFile = path.join(this.cacheDir, `${fileName}_cache_${this.expire}.json`)
+            }
 
+            //console.log('new file?',`${fileName}_cache_${this.expire}.json`)
             try {
                 fs.writeFileSync(newFile, JSON.stringify(data))
                 return true
@@ -265,17 +270,18 @@ module.exports = () => {
                 if (this.debug) onerror('[update] newData not set')
                 return
             }
+
             let sourceData = this.load(fileName)
             if (isEmpty(sourceData)) return false
 
             if (isObject(sourceData) && isObject(newData)) {
                 let merged = merge(sourceData, newData) || {}
-                let done = this.write(fileName, merged,'update')
+                let done = this.write(fileName, merged)
                 if (done) return merged
             }
             if (isArray(sourceData) && isArray(newData)) {
                 let merged = merge(newData, sourceData) || []
-                let done = this.write(fileName, merged, type='update')
+                let done = this.write(fileName, merged)
                 if (done) return merged
             } else {
                 throw (' you can only update/merge data with last cache that is of eaqul type!')

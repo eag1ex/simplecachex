@@ -7,7 +7,8 @@ npm-debug.log
 .DS_Store
 dist
 public
-cache/*
+cache
+mycache
 md_test.js
 # Docker
 Dockerfile

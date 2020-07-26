@@ -114,9 +114,7 @@ module.exports = () => {
             })
             // sort latest first
             fileList.sort((a, b) => b - a)
-            if (limit) warn(`[fileLimit] limit must be gth then 0, nothig deleted!`)
             fileList.splice(0, limit)
-
             dir.forEach((file, inx) => {
                 let timestamp = this.fileTimeStamp(file)
                 if (fileList.indexOf(timestamp) !== -1) {

@@ -8,7 +8,7 @@ var debug = true // display any warnings
 const opts = {
     expire:-1,
     cacheDir:path.join(__dirname, "./mycache"),
-    autoDeleteLimit:2
+    autoDeleteLimit:1
 }
 const sc = new SimpleCache(opts, debug)
 // sc.fileLimit(5) // NOTE direct call to this is ignored when autoDeleteLimit>0
@@ -18,8 +18,8 @@ var data = { bankName: 'Swiss Bank 7', assets: 10000 }//,
     //{ bankName: 'Deutsche Bank 9', assets: 10000 }] // can be string or array/object of data
 
 sc.write(fName, data)
-sc.write(fName, data)
-sc.write(fName, data)
+// sc.write(fName, data)
+// sc.write(fName, data)
 var cache = sc.load(fName) // load cache data
 
 // update with new data

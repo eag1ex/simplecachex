@@ -37,7 +37,7 @@ module.exports = () => {
            this._cacheDir = opts.cacheDir || null // or use default instead
             this.expire = opts.expire || 1
             this.expireIn = null
-
+            this.autoDeleteLimit = Number(opts.autoDeleteLimit) || 0 // NOTE check file limit every time new file is being created, when enabled (number provided), when set method `fileLimit()` can no longer be used maualy, but controlled by this setting
             if((this.cacheDir||"").length<2) throw('provided wrong cacheDir')
             this.makeDir(this.cacheDir)
             this.removeExpired()
@@ -100,8 +100,12 @@ module.exports = () => {
         /**
          * - keep desired file limit in your `cacheDir` path
          */
-        fileLimit(limit = 0) {
-
+        fileLimit(limit = 0, override=null) {
+            if(this.autoDeleteLimit>0 && !override) {
+                if(this.debug) warn(`[fileLimit] cannot use this method directly when autoDeleteLimit>0`)
+                return this
+            }
+            if (limit < 1) return this
             let dir = fs.readdirSync(this.cacheDir) || []
             let fileList = []
             dir.forEach((file, inx) => {
@@ -231,12 +235,16 @@ module.exports = () => {
          * * file written in format: {fileName}_cache_{timestamp}.json
          * return boolean
          */
-        write(fileName, data) {
+        write(fileName, data, _type=null) {
             if (this.errHandler(fileName, 'write')) return false
             if (isEmpty(data)) {
                 if (this.debug) log('write data must be set')
                 return false
             }
+
+            // NOTE only delete files by limit when calling `write` method directly and  `autoDeleteLimit` is larger then 0
+            if (!_type) this.fileLimit(this.autoDeleteLimit, true)
+
             const newFile = path.join(this.cacheDir, `${fileName}_cache_${this.expire}.json`)
 
             try {
@@ -264,12 +272,12 @@ module.exports = () => {
 
             if (isObject(sourceData) && isObject(newData)) {
                 let merged = merge(sourceData, newData) || {}
-                let done = this.write(fileName, merged)
+                let done = this.write(fileName, merged,'update')
                 if (done) return merged
             }
             if (isArray(sourceData) && isArray(newData)) {
                 let merged = merge(newData, sourceData) || []
-                let done = this.write(fileName, merged)
+                let done = this.write(fileName, merged, type='update')
                 if (done) return merged
             } else {
                 throw (' you can only update/merge data with last cache that is of eaqul type!')

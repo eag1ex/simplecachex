@@ -6,11 +6,16 @@
 * Simple cache that can be adapted by any application, for server testing or any purpose. Cache is being saved in `./cache` dir.
 
 ##### Methods
+* `instance opts`:
+   - `expire:number`: specify number when cache should expire, example: 0.1=== 10min, -1 === never/indefinite
+   - `cacheDir:string`: optional when setting custom cache path, must provide full path, example: `path.join(__dirname, "./mycache")`
+   -  `autoDeleteLimit:number`: optional to allow recycle old files first by limit specified, works together with `fileLimit(number)`
+
 * `getAll()` : Read all available cache before expires
 * `write(fileName, data):void` : Write new cache, with timestamp 
 * `update(fileName, data)` : Update/ and return existing cache, in a new file with new timestamp
 * `load(fileName)` : Load latest (by timestamp) cache before if exists.
-* `fileLimit(limit:Number)` : Keep desired file limit in your cacheDir, ordered by latest
+* `fileLimit(limit:Number)` : recycle old files from `cacheDir` by limit number, can only use this method manualy when autoDeleteLimit is not set or autoDeleteLimit=0
 - `data` : Data can be a string, array, or object
 - `fileName` : name cannot include any file extension, or underscore
 - `debug:Boolean` : You can enable debug to see any errors or warnings
@@ -30,6 +35,7 @@ const SimpleCache = require('./simpleCacheX')()
 var debug = true // display any warnings
 
 const opts = {
+    autoDeleteLimit: 15, // auto delete files by specified limit
     expire:0.1 // 10min // or -1 (no limit/indefinite)
     // cacheDir: >> full path // defaults to `./cache` dir at root of simplecachex app
 }

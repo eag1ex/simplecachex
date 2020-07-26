@@ -24,7 +24,6 @@
  */
 
 module.exports = () => {
-
     const fs = require('fs')
     const { merge, isString, isObject, isArray, isEmpty, isNumber } = require('lodash')
     const path = require('path')
@@ -38,6 +37,9 @@ module.exports = () => {
            this._cacheDir = opts.cacheDir || null // or use default instead
             this.expire = opts.expire || 1
             this.expireIn = null
+
+            if((this.cacheDir||"").length<2) throw('provided wrong cacheDir')
+            this.makeDir(this.cacheDir)
             this.removeExpired()
         }
 
@@ -48,6 +50,7 @@ module.exports = () => {
         get expire() {
             return this._expire
         }
+
 
         set expire(v) {
             let newTime
@@ -78,10 +81,27 @@ module.exports = () => {
             this._expire = newTime
         }
 
+        /** 
+         * - test if dir exists or make new one
+        */
+        makeDir(dirName) {     
+            if (!fs.existsSync(dirName)) {        
+                try {
+                    fs.mkdirSync(dirName);
+                    return true
+                } catch (err) {
+                    if(this.debug) onerror('[write]',err.toString())
+                    return false
+                }     
+            }
+            return true
+        }
+
         /**
          * - keep desired file limit in your `cacheDir` path
          */
         fileLimit(limit = 0) {
+
             let dir = fs.readdirSync(this.cacheDir) || []
             let fileList = []
             dir.forEach((file, inx) => {
@@ -119,30 +139,36 @@ module.exports = () => {
             let fileFilePath = path.join(this.cacheDir, file)
             try {
                 fs.unlinkSync(fileFilePath)
+                return true
             } catch (err) {
                 if (this.debug) onerror(`[removeIt] file not removed`)
                 // handle the error
+                return false
             }
-            return this
         }
 
         /**
          * @removeExpired
          * * removes expired files
          */
-        removeExpired() {
-           // let dirPath = path.join(__dirname, `${this.cacheDir}`)
-            let dir = fs.readdirSync(this.cacheDir) ||[]
+        async removeExpired() {
+            // let dirPath = path.join(__dirname, `${this.cacheDir}`)
+            try {
+                let dir = fs.readdirSync(this.cacheDir) || []
 
-            dir.forEach((file, inx) => {
-                let timestamp = this.fileTimeStamp(file)
-                if (timestamp!==null) {
-                    let curTime = new Date().getTime()
-                    if (curTime >= timestamp) {
-                        this.removeIt(file)
+                dir.forEach((file, inx) => {
+                    let timestamp = this.fileTimeStamp(file)
+                    if (timestamp !== null) {
+                        let curTime = new Date().getTime()
+                        if (curTime >= timestamp) {
+                            this.removeIt(file)
+                        }
                     }
-                }
-            })
+                })
+            } catch (err) {
+                if (this.debug) onerror(`[removeExpired]`, err.toString())
+            }
+
         }
 
         /**
@@ -152,20 +178,27 @@ module.exports = () => {
         getAll() {
             let allCache = {}
             //let dirPath = path.join(__dirname, `${this.cacheDir}`)
-            let dir = fs.readdirSync(this.cacheDir)
+            try {
+                let dir = fs.readdirSync(this.cacheDir) || []
 
-            dir.forEach((file, inx) => {
-                let timestamp = this.fileTimeStamp(file)
-                if (timestamp!==null) {
-                    let curTime = new Date().getTime()
-                    if (curTime < timestamp) {
-                        let fileName = file.split('_')[0]
-                        let d = this.load(fileName)
-                        allCache[fileName] = d
+                dir.forEach((file, inx) => {
+                    let timestamp = this.fileTimeStamp(file)
+                    if (timestamp !== null) {
+                        let curTime = new Date().getTime()
+                        if (curTime < timestamp) {
+                            let fileName = file.split('_')[0]
+                            let d = this.load(fileName)
+                            allCache[fileName] = d
+                        }
                     }
-                }
-            })
-            return allCache
+                })
+
+                return allCache
+            } catch (err) {
+                if(this.debug) onerror(`[getAll]`,err.toString() )
+                return null
+            }
+
         }
 
         errHandler(fileName, _where) {
@@ -210,7 +243,7 @@ module.exports = () => {
                 fs.writeFileSync(newFile, JSON.stringify(data))
                 return true
             } catch (err) {
-                log(err, true)
+                onerror('[write]',err.toString())
                 return false
             }
         }

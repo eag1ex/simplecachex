@@ -1,13 +1,13 @@
 
 const {log} = require('x-utils-es/umd')
 const SimpleCache = require('./index')()
-
+const path = require('path')
 /// var expire = -1 // 0.1 === 10min
 var debug = true // display any warnings
 
 const opts = {
-    expire:-1
-    // cacheDir: >> full path
+    expire:-1,
+    cacheDir:path.join(__dirname, "./mycache")
 }
 const sc = new SimpleCache(opts, debug)
 sc.fileLimit(1)
@@ -25,5 +25,6 @@ var cache = sc.update(fName, newData)
 log({ cache })
 
 // get all available cache
+
 log({ allCache: sc.getAll() })
- 
+return

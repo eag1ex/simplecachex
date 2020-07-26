@@ -24,7 +24,6 @@
 * `npm i`
 
 
-
 ### Example usage:
 ```
 const SimpleCache = require('./simpleCacheX')()

@@ -10,7 +10,7 @@
 * `write(fileName, data):void` : Write new cache, with timestamp 
 * `update(fileName, data)` : Update/ and return existing cache, in a new file with new timestamp
 * `load(fileName)` : Load latest (by timestamp) cache before if exists.
-
+* `fileLimit(limit:Number)` : Keep desired file limit in your cacheDir, ordered by latest
 - `data` : Data can be a string, array, or object
 - `fileName` : name cannot include any file extension, or underscore
 - `debug:Boolean` : You can enable debug to see any errors or warnings
@@ -28,9 +28,14 @@
 ### Example usage:
 ```
 const SimpleCache = require('./simpleCacheX')()
-var expire = 0.1 // 10min
 var debug = true // display any warnings
-const sc = new SimpleCache(expire, debug)
+
+const opts = {
+    expire:0.1 // 10min // or -1 (no limit/indefinite)
+    // cacheDir: >> full path // defaults to `./cache` dir at root of simplecachex app
+}
+
+const sc = new SimpleCache(opts, debug)
 
 // get all available cache 
 sc.getAll()

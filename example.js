@@ -2,13 +2,18 @@
 const {log} = require('x-utils-es/umd')
 const SimpleCache = require('./index')()
 
-var expire = -1 // 0.1 === 10min
-var debug = false // display any warnings
-const sc = new SimpleCache(expire, debug)
+/// var expire = -1 // 0.1 === 10min
+var debug = true // display any warnings
 
-var fName = 'bankData' // has format restriction validation, enable `debug to see any errors or warnings`
-var data = [{ bankName: 'Swiss Bank', assets: 10000 },
-    { bankName: 'Deutsche Bank', assets: 10000 }] // can be string or array/object of data
+const opts = {
+    expire:-1
+    // cacheDir: >> full path
+}
+const sc = new SimpleCache(opts, debug)
+sc.fileLimit(1)
+var fName = 'bankData12' // has format restriction validation, enable `debug to see any errors or warnings`
+var data = [{ bankName: 'Swiss Bank 7', assets: 10000 },
+    { bankName: 'Deutsche Bank 9', assets: 10000 }] // can be string or array/object of data
 
 sc.write(fName, data)
 var cache = sc.load(fName) // load cache data
@@ -20,5 +25,5 @@ var cache = sc.update(fName, newData)
 log({ cache })
 
 // get all available cache
-// log({ allCache: sc.getAll() })
+log({ allCache: sc.getAll() })
  

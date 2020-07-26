@@ -32,17 +32,19 @@ module.exports = () => {
     const { log, warn, onerror } = require('x-utils-es/umd')
 
     class SimpleCacheX {
-        constructor(expire, debug = false) {
+        constructor(opts={}, debug = false) {
             this.debug = debug
-            this._expire = 1 // default, or in hours >  (1, 3, 5, 0.5)
-            this.expire = expire
+           // this._expire = 1 // default, or in hours >  (1, 3, 5, 0.5)
+           this._cacheDir = opts.cacheDir || null // or use default instead
+            this.expire = opts.expire || 1
             this.expireIn = null
             this.removeExpired()
         }
 
         get cacheDir() {
-            return `../cache`
+            return this._cacheDir || path.join(__dirname, `../cache`)
         }
+
         get expire() {
             return this._expire
         }
@@ -73,8 +75,55 @@ module.exports = () => {
             let expireIn = moment(newTime).format('MMMM Do YYYY, h:mm:ss a')
             this.expireIn = { date: newTime, nice: expireIn }
             if (this.debug) log({ message: 'cache will expire at', expireIn })
-
             this._expire = newTime
+        }
+
+        /**
+         * - keep desired file limit in your `cacheDir` path
+         */
+        fileLimit(limit = 0) {
+            let dir = fs.readdirSync(this.cacheDir) || []
+            let fileList = []
+            dir.forEach((file, inx) => {
+                let timestamp = this.fileTimeStamp(file)
+                if (timestamp !== null) fileList.push(timestamp)
+            })
+            // sort latest first
+            fileList.sort((a, b) => b - a)
+            if (limit) warn(`[fileLimit] limit must be gth then 0, nothig deleted!`)
+            fileList.splice(0, limit)
+
+            dir.forEach((file, inx) => {
+                let timestamp = this.fileTimeStamp(file)
+                if (fileList.indexOf(timestamp) !== -1) {
+                    this.removeIt(file)
+                    log(`removed by limit`, file)
+                }
+            })
+            return this
+        }
+
+        /** 
+         * - get file timestamp from file 
+         * @returns timestamp
+        */
+        fileTimeStamp(file) {
+            let timestamp = file.split('_')
+            timestamp = timestamp[timestamp.length - 1]
+            timestamp = timestamp.replace('.json', '')
+            timestamp = Number(timestamp)
+            return isNumber(timestamp) ? timestamp : null
+        }
+
+        removeIt(file) {
+            let fileFilePath = path.join(this.cacheDir, file)
+            try {
+                fs.unlinkSync(fileFilePath)
+            } catch (err) {
+                if (this.debug) onerror(`[removeIt] file not removed`)
+                // handle the error
+            }
+            return this
         }
 
         /**
@@ -82,28 +131,15 @@ module.exports = () => {
          * * removes expired files
          */
         removeExpired() {
-            let dirPath = path.join(__dirname, `${this.cacheDir}`)
-            let dir = fs.readdirSync(dirPath)
-
-            let removeIt = (file) => {
-                let fileFilePath = path.join(dirPath, file)
-                try {
-                    fs.unlinkSync(fileFilePath)
-                } catch (err) {
-                    // handle the error
-                }
-            }
+           // let dirPath = path.join(__dirname, `${this.cacheDir}`)
+            let dir = fs.readdirSync(this.cacheDir) ||[]
 
             dir.forEach((file, inx) => {
-                let timestamp = file.split('_')
-                timestamp = timestamp[timestamp.length - 1]
-                timestamp = timestamp.replace('.json', '')
-                timestamp = Number(timestamp)
-
-                if (isNumber(timestamp)) {
+                let timestamp = this.fileTimeStamp(file)
+                if (timestamp!==null) {
                     let curTime = new Date().getTime()
                     if (curTime >= timestamp) {
-                        removeIt(file)
+                        this.removeIt(file)
                     }
                 }
             })
@@ -115,16 +151,12 @@ module.exports = () => {
          */
         getAll() {
             let allCache = {}
-            let dirPath = path.join(__dirname, `${this.cacheDir}`)
-            let dir = fs.readdirSync(dirPath)
+            //let dirPath = path.join(__dirname, `${this.cacheDir}`)
+            let dir = fs.readdirSync(this.cacheDir)
 
             dir.forEach((file, inx) => {
-                let timestamp = file.split('_')
-                timestamp = timestamp[timestamp.length - 1]
-                timestamp = timestamp.replace('.json', '')
-                timestamp = Number(timestamp)
-
-                if (isNumber(timestamp)) {
+                let timestamp = this.fileTimeStamp(file)
+                if (timestamp!==null) {
                     let curTime = new Date().getTime()
                     if (curTime < timestamp) {
                         let fileName = file.split('_')[0]
@@ -172,7 +204,7 @@ module.exports = () => {
                 if (this.debug) log('write data must be set')
                 return false
             }
-            const newFile = path.join(__dirname, `${this.cacheDir}/${fileName}_cache_${this.expire}.json`)
+            const newFile = path.join(this.cacheDir, `${fileName}_cache_${this.expire}.json`)
 
             try {
                 fs.writeFileSync(newFile, JSON.stringify(data))
@@ -220,7 +252,7 @@ module.exports = () => {
         findMatch(fileName) {
             if (this.errHandler(fileName, 'scanFind')) return ''
 
-            let dir = fs.readdirSync(path.join(__dirname, `${this.cacheDir}`)) || []
+            let dir = fs.readdirSync(this.cacheDir) || []
             let found = dir.reduce((n, el) => {
                 if (el.indexOf(fileName) !== -1) {
                     let ell = el.split('.json')[0]

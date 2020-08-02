@@ -9,14 +9,14 @@ const opts = {
     keepLast:true, // keep last uniq file
     expire:Infinity, //'10s', // {time/Format}  "1h" "2m" "30s" (h/m/s)
     cacheDir:path.join(__dirname, "./mycache"),
-    autoDeleteLimit:1 // NOTE  auto delete, but will persist uniq files if `keepLast` is set
+    autoDeleteLimit:5 // NOTE regardless of expire only keep up to number set on cacheDir
 }
 
 const sc = new SimpleCache(opts, debug)
 
 //sc.fileLimit(2) // NOTE direct call is ignored when autoDeleteLimit>0
 
-var fName = 'job-47' // has format restriction validation, enable `debug to see any errors or warnings`
+var fName = 'job-2433' // has format restriction validation, enable `debug to see any errors or warnings`
 var data = [{ bankName: 'Swiss Bank', assets: 10000 }]//,
     //{ bankName: 'Deutsche Bank 9', assets: 10000 }] // can be string or array/object of data
 

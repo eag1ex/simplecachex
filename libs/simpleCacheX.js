@@ -176,7 +176,8 @@ module.exports = () => {
 
                 let timestamp = this.fileTimeStamp(file)
                  // log(`removed by limit`, file)
-                let uniqFiles = this.keepLast && uniqFilesByTimestamp.indexOf(timestamp)!==-1 
+                    // means only test if autoDeleteLimit is not set,and keepLast is set
+                let uniqFiles = this.keepLast && uniqFilesByTimestamp.indexOf(timestamp)!==-1 && this.autoDeleteLimit <1
                 if(uniqFiles) return
                 if (timeList.indexOf(timestamp) !== -1 ) this.removeIt(file)
             })
@@ -263,7 +264,9 @@ module.exports = () => {
                        keepLast = keepLast && timestamp === keepLast
                        if(keepLast) return
                        
-                       let unq =  uniqFilesByTimestamp.indexOf(timestamp)!==-1  &&  this.keepLast
+                       // means only test if autoDeleteLimit is not set,and keepLast is set
+                       let unq =  uniqFilesByTimestamp.indexOf(timestamp)!==-1  &&  this.keepLast && this.autoDeleteLimit<1
+
                        if(unq) return
                         if (curTime >= timestamp ) {
                             this.removeIt(file)

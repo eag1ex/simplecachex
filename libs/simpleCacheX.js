@@ -169,7 +169,7 @@ module.exports = () => {
 
                 let timestamp = this.fileTimeStamp(file)
                  // log(`removed by limit`, file)
-                let uniqFiles = this.keepLast && uniqFilesByTimestamp.indexOf(timestamp)!==-1
+                let uniqFiles = this.keepLast && uniqFilesByTimestamp.indexOf(timestamp)!==-1 
                 if(uniqFiles) return
                 if (timeList.indexOf(timestamp) !== -1 ) this.removeIt(file)
             })
@@ -247,14 +247,18 @@ module.exports = () => {
                 dir.forEach((file, inx) => {
                    
                     if(inxLessThen(inx))  return
-
+                   
                     let timestamp = this.fileTimeStamp(file)
                     if (timestamp !== null) {
                        let curTime = new Date().getTime()
+                       
                        let keepLast = this.keepLast && this.fileListTimes[0] ? this.fileListTimes[0] || '' : ''
                        keepLast = keepLast && timestamp === keepLast
-                       let notUniq =  uniqFilesByTimestamp.indexOf(timestamp)===-1
-                        if (curTime >= timestamp &&  !keepLast && notUniq ) {
+                       if(keepLast) return
+                       
+                       let unq =  uniqFilesByTimestamp.indexOf(timestamp)!==-1  &&  this.keepLast
+                       if(unq) return
+                        if (curTime >= timestamp ) {
                             this.removeIt(file)
                         }
                     }
@@ -348,7 +352,7 @@ module.exports = () => {
          * * file written in format: {fileName}_cache_{timestamp}.json
          * return boolean
          */
-        write(fileName, data) {
+        write(fileName='', data) {
             if (this.errHandler(fileName, 'write')) return false
             if (isFalsy(data)) {
                 if (this.debug) warn('[write] cannot set falsy values')
@@ -357,7 +361,7 @@ module.exports = () => {
 
             // NOTE only delete files by limit when calling `write` method directly and  `autoDeleteLimit` is larger then 0
             this.fileLimit(this.autoDeleteLimit, true)
-            let newFile = path.join(this.cacheDir, `${fileName}_${this.cachePrefix}_${this.expire}.json`)
+            let newFile = path.join(this.cacheDir, `${fileName}_${this.cachePrefix}_${this.expire}.json`) ||''
 
             /** 
              * - update or write to existing file if keepLast is set that file still exists, or keep creating new file
@@ -366,7 +370,8 @@ module.exports = () => {
                 if (this.keepLast) {
                     let firstFile = this.listFiles[0]
                     if(firstFile){
-                        if (firstFile.indexOf(fileName)!==-1 && (fileName && firstFile)) {
+                        let firstFileName = firstFile.split(this.cachePrefix)[0].replace(/_/g,'') ||''
+                        if ((firstFileName.indexOf(fileName)===0 && firstFileName.length===fileName.length) && (fileName && firstFileName)) {
                             let testFile = path.join(this.cacheDir,  firstFile)
                             if(fs.existsSync(testFile)) {
                                 newFile = testFile

@@ -6,27 +6,26 @@ const path = require('path')
 var debug = true // display any warnings
 
 const opts = {
-     keepLast:true, 
-    expire: '10s', // {time/Format}  "1h" "2m" "30s" (h/m/s)
+    keepLast:true, // keep last uniq file
+    expire:Infinity, //'10s', // {time/Format}  "1h" "2m" "30s" (h/m/s)
     cacheDir:path.join(__dirname, "./mycache"),
-    //autoDeleteLimit:5
+    autoDeleteLimit:1 // NOTE  auto delete, but will persist uniq files if `keepLast` is set
 }
 
 const sc = new SimpleCache(opts, debug)
 
-// sc.fileLimit(5) // NOTE direct call to this is ignored when autoDeleteLimit>0
+//sc.fileLimit(2) // NOTE direct call is ignored when autoDeleteLimit>0
 
-var fName = 'a-3abczntest' // has format restriction validation, enable `debug to see any errors or warnings`
-var data = [{ bankName: 'Swiss Bank 1000000', assets: 10000 }]//,
+var fName = 'job-47' // has format restriction validation, enable `debug to see any errors or warnings`
+var data = [{ bankName: 'Swiss Bank', assets: 10000 }]//,
     //{ bankName: 'Deutsche Bank 9', assets: 10000 }] // can be string or array/object of data
 
+sc.write(fName, data)
 // sc.write(fName, data)
 // sc.write(fName, data)
-// sc.write(fName, data)
-
 
 // update existing `fName` with new data
-var newData = [{ bankName: 'China Bank2323',assets:-1775656 }] 
+var newData = [{ bankName: 'China Bank',assets:20000 }] 
 sc.update(fName, newData)
 
 // check expire

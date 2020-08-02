@@ -38,6 +38,9 @@ module.exports = () => {
             this.keepLast = opts.keepLast || false // allow for latest cache file to remain, and not expire
             this._cacheDir = opts.cacheDir || null // or use default instead
             this.expire = opts.expire || this.defaultTime.str
+            if(!opts.expire) {
+                if(this.debug) log(`opts.expire not set setting defaultTime: ${opts.expire}`)
+            }
             this._expireIn = null
             this.autoDeleteLimit = Number(opts.autoDeleteLimit) || 0 // NOTE check file limit every time new file is being created, when enabled (number provided), then set method `fileLimit()` can no longer be used maualy, but controlled by this setting
             if ((this.cacheDir || "").length < 2) throw ('provided wrong cacheDir')
@@ -58,10 +61,6 @@ module.exports = () => {
 
         get cacheDir() {
             return this._cacheDir || path.join(__dirname, `../cache`)
-        }
-
-        get expire() {
-            return this._expire
         }
 
         /** 
@@ -93,9 +92,13 @@ module.exports = () => {
          * - when setting expire, format: {hour:min:sec}
          * @returns new timestamp
         */
-        setDate(number) {
-
-            let timeFormat = this.validFormat(number)
+        setDate(timeValue) {
+            // NOTE set time far in to the future
+            if(timeValue===Infinity) {
+                timeValue = `11111111h`
+                    if(this.debug) log(`expire has been to never expire`)
+            }
+            let timeFormat = this.validFormat(timeValue)
             if (!timeFormat.valid) {
                 if (this.debug) warn(`[setDate] invalid format provided, setting`,{defaultTime:this.defaultTime})
                 timeFormat = this.defaultTime
@@ -112,6 +115,10 @@ module.exports = () => {
 
         get expireIn(){
             return this._expireIn
+        }
+
+        get expire() {
+            return this._expire
         }
 
         set expire(v) {
@@ -455,6 +462,7 @@ module.exports = () => {
          * * return data
          */
         load(fileName) {
+
             if (this.errHandler(fileName, 'load')) return false
 
             try {
@@ -472,8 +480,6 @@ module.exports = () => {
                 return null
             }
         }
-
-
 
         /**
          * @getAll

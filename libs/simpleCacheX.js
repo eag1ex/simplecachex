@@ -31,16 +31,21 @@ module.exports = () => {
     const { log, warn, onerror } = require('x-utils-es/umd')
 
     class SimpleCacheX {
-        constructor(opts={}, debug = false) {
+        constructor(opts = {}, debug = false) {
             this.debug = debug
-           // this._expire = 1 // default, or in hours >  (1, 3, 5, 0.5)
-           this._cacheDir = opts.cacheDir || null // or use default instead
-            this.expire = opts.expire || 1
+            // this._expire = 1 // default, or in hours >  (1, 3, 5, 0.5)
+            this.keepLast = opts.keepLast || false // allow for latest cache file to remain, and not expire
+            this._cacheDir = opts.cacheDir || null // or use default instead
+            this.expire = opts.expire || this.defaultTime.str
             this.expireIn = null
-            this.autoDeleteLimit = Number(opts.autoDeleteLimit) || 0 // NOTE check file limit every time new file is being created, when enabled (number provided), when set method `fileLimit()` can no longer be used maualy, but controlled by this setting
-            if((this.cacheDir||"").length<2) throw('provided wrong cacheDir')
+            this.autoDeleteLimit = Number(opts.autoDeleteLimit) || 0 // NOTE check file limit every time new file is being created, when enabled (number provided), then set method `fileLimit()` can no longer be used maualy, but controlled by this setting
+            if ((this.cacheDir || "").length < 2) throw ('provided wrong cacheDir')
             this.makeDir(this.cacheDir)
             this.removeExpired()
+        }
+
+        get defaultTime() {
+            return { time: 1, format: 'h', str:'1h' }
         }
 
         get cacheDir() {
@@ -51,29 +56,57 @@ module.exports = () => {
             return this._expire
         }
 
+        /** 
+         * 
+         * @param expire string (example: 1h,5m, 10s)
+         * @returns {valid:true/false, format, time}
+        */
+        validFormat(expire) {
+            let test = ['h', 'm', 's']
+            let exp = (expire || '').toString().toLowerCase()
 
-        set expire(v) {
-            let newTime
-            if (isNaN(Number(v))) {
-                let defaultTime = 1 // 1 hour
-                let forwardTime = (defaultTime * 60 * 60 * 1000)
-                newTime = new Date(Date.now() + forwardTime).getTime()
-                if (this.debug) log('provided wrong expiry format, defaulting:1hr')
-            } else {
-                // NOTE using -1 as never expire
+            let matched = test.filter(n => {
+                if (exp.indexOf(n) !== -1) {
+                    let expArr = exp.split(n).filter(n=>!!n)
+                    let [time] = expArr
+                    if (expArr.length === 1 || Number(time)>=0 && isNaN(Number(time))===false ) return true
+                } else return false
+            })
 
-                if (Number(v) === -1) {
-                    v = 10000000// setting large ininite number to never extire
-                    if (this.debug) log('expire=-1 setting to never expire')
-                }
+            // must include only 1 test pattern
+            if (matched.length !== 1) return { valid: false }
 
-                let forwardTime = (Number(v) * 60 * 60 * 1000)
-                newTime = new Date(Date.now() + forwardTime).getTime()
+            let timeS = exp.split(matched[0]).filter(n=>!!n)
+            let time = Number(timeS)
+            return {format:matched[0],time, valid:true}
+        }
+
+        /** 
+         * - when setting expire, format: {hour:min:sec}
+         * @returns new timestamp
+        */
+        setDate(number) {
+
+            let timeFormat = this.validFormat(number)
+            if (!timeFormat.valid) {
+                if (this.debug) warn(`[setDate] invalid format provided, setting`,{defaultTime:this.defaultTime})
+                timeFormat = this.defaultTime
             }
 
+            let d1 = new Date()
+            let d2 = new Date(d1)
+            if (timeFormat.format === 'h') d2.setHours(d1.getHours() + timeFormat.time)
+            if (timeFormat.format === 'm') d2.setMinutes(d1.getMinutes() + timeFormat.time)
+            if (timeFormat.format === 's') d2.setSeconds(d1.getSeconds() + timeFormat.time)
+            if(!timeFormat.format) throw(' no timeFormat.format matched ')
+            return d2.getTime()
+        }
+
+        set expire(v) {
+            if (this._expire) return
+            const newTime = this.setDate(v)
             let valid = moment(newTime).isValid()
             if (!valid) throw ('specified {expire} time is invalid')
-
             let expireIn = moment(newTime).format('MMMM Do YYYY, h:mm:ss a')
             this.expireIn = { date: newTime, nice: expireIn }
             if (this.debug) log({ message: 'cache will expire at', expireIn })
@@ -83,15 +116,15 @@ module.exports = () => {
         /** 
          * - test if dir exists or make new one
         */
-        makeDir(dirName) {     
-            if (!fs.existsSync(dirName)) {        
+        makeDir(dirName) {
+            if (!fs.existsSync(dirName)) {
                 try {
                     fs.mkdirSync(dirName);
                     return true
                 } catch (err) {
-                    if(this.debug) onerror('[write]',err.toString())
+                    if (this.debug) onerror('[write]', err.toString())
                     return false
-                }     
+                }
             }
             return true
         }
@@ -99,27 +132,29 @@ module.exports = () => {
         /**
          * - keep desired file limit in your `cacheDir` path
          */
-        fileLimit(limit = 0, override=null) {
-            if(this.autoDeleteLimit>0 && !override) {
-                if(this.debug) warn(`[fileLimit] cannot use this method directly when autoDeleteLimit>0`)
+        fileLimit(limit = 0, override = null) {
+            if (this.autoDeleteLimit > 0 && !override) {
+                if (this.debug) warn(`[fileLimit] cannot use this method directly when autoDeleteLimit>0`)
                 return this
             }
             if (limit < 1) return this
-            let dir = fs.readdirSync(this.cacheDir) || []
-            let fileList = []
+            let dir = this.listFiles
+   
+            let tileList = dir.map((file, inx) => {
+                let timestamp = this.fileTimeStamp(file)
+                if (timestamp !== null) return timestamp
+            }).filter(n=>!!n)
+              .sort((a, b) => b - a) //NOTE  sort latest first 
+
+            // keep latest file
+            if (tileList.length === 1 && this.keepLast)  return this
+            if(this.keepLast) tileList.splice(0, limit)
+
+            // delete all else
             dir.forEach((file, inx) => {
                 let timestamp = this.fileTimeStamp(file)
-                if (timestamp !== null) fileList.push(timestamp)
-            })
-            // sort latest first
-            fileList.sort((a, b) => b - a)
-            fileList.splice(0, limit)
-            dir.forEach((file, inx) => {
-                let timestamp = this.fileTimeStamp(file)
-                if (fileList.indexOf(timestamp) !== -1) {
-                    this.removeIt(file)
-                   // log(`removed by limit`, file)
-                }
+                 // log(`removed by limit`, file)
+                if (tileList.indexOf(timestamp) !== -1) this.removeIt(file)
             })
             return this
         }
@@ -148,20 +183,37 @@ module.exports = () => {
             }
         }
 
+        /** 
+         * - list files in order from latest first
+        */
+        get listFiles(){
+            return (fs.readdirSync(this.cacheDir) || []).sort((a,b)=>{
+                return this.fileTimeStamp(b) - this.fileTimeStamp(a)
+            })
+        }
+
+        /** 
+         * - return ordered fileListTimes
+         * - keeps the list from first enquiry
+        */
+        get fileListTimes() {
+            return (fs.readdirSync(this.cacheDir) || []).map(n => this.fileTimeStamp(n)).sort((a, b) => b - a)
+        }
+
         /**
          * @removeExpired
          * * removes expired files
          */
         async removeExpired() {
-            // let dirPath = path.join(__dirname, `${this.cacheDir}`)
             try {
-                let dir = fs.readdirSync(this.cacheDir) || []
-
+                let dir = this.listFiles
                 dir.forEach((file, inx) => {
                     let timestamp = this.fileTimeStamp(file)
                     if (timestamp !== null) {
-                        let curTime = new Date().getTime()
-                        if (curTime >= timestamp) {
+                       let curTime = new Date().getTime()
+                       let keepLast = this.keepLast && this.fileListTimes[0] ? this.fileListTimes[0] || '' : ''
+                       keepLast = keepLast && timestamp === keepLast
+                        if (curTime >= timestamp &&  !keepLast) {
                             this.removeIt(file)
                         }
                     }
@@ -178,25 +230,28 @@ module.exports = () => {
          */
         getAll() {
             let allCache = {}
-            //let dirPath = path.join(__dirname, `${this.cacheDir}`)
             try {
-                let dir = fs.readdirSync(this.cacheDir) || []
+                // latest first
+                let dir = this.listFiles
+
+                const load = (file)=>{
+                    let fileName = file.split('_')[0]
+                    let d = this.load(fileName)
+                    allCache[fileName] = d
+                }
 
                 dir.forEach((file, inx) => {
                     let timestamp = this.fileTimeStamp(file)
                     if (timestamp !== null) {
                         let curTime = new Date().getTime()
-                        if (curTime < timestamp) {
-                            let fileName = file.split('_')[0]
-                            let d = this.load(fileName)
-                            allCache[fileName] = d
-                        }
+                        if (curTime < timestamp)  return load(file)
+                        if(this.keepLast && inx===0) load(file)
                     }
                 })
-
+              
                 return allCache
             } catch (err) {
-                if(this.debug) onerror(`[getAll]`,err.toString() )
+                if (this.debug) onerror(`[getAll]`, err.toString())
                 return null
             }
 
@@ -241,20 +296,29 @@ module.exports = () => {
 
             // NOTE only delete files by limit when calling `write` method directly and  `autoDeleteLimit` is larger then 0
             this.fileLimit(this.autoDeleteLimit, true)
-
             let newFile = path.join(this.cacheDir, `${fileName}_cache_${this.expire}.json`)
-            //NOTE  if file already exists make sure when writing regenerage expire date
-            if(fs.existsSync(newFile)){
-                this.expire = Object.assign({},this.expire)
-                newFile = path.join(this.cacheDir, `${fileName}_cache_${this.expire}.json`)
-            }
 
+            /** 
+             * - update or write to existing file if keepLast is set that file still exists, or keep creating new file
+            */
+            if (!fs.existsSync(newFile)) {
+                if (this.keepLast) {
+                    let firstFile = this.listFiles[0]
+                    if (firstFile.indexOf(fileName)!==-1 && (fileName && firstFile)) {
+                        let testFile = path.join(this.cacheDir,  firstFile)
+                        if(fs.existsSync(testFile)) {
+                            newFile = testFile
+                            log('file exists??')
+                        }
+                    }
+                }
+            }
             //console.log('new file?',`${fileName}_cache_${this.expire}.json`)
             try {
                 fs.writeFileSync(newFile, JSON.stringify(data))
                 return true
             } catch (err) {
-                onerror('[write]',err.toString())
+                onerror('[write]', err.toString())
                 return false
             }
         }
@@ -297,7 +361,7 @@ module.exports = () => {
         findMatch(fileName) {
             if (this.errHandler(fileName, 'scanFind')) return ''
 
-            let dir = fs.readdirSync(this.cacheDir) || []
+            let dir = this.listFiles
             let found = dir.reduce((n, el) => {
                 if (el.indexOf(fileName) !== -1) {
                     let ell = el.split('.json')[0]

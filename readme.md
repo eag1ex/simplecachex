@@ -7,7 +7,7 @@
 
 ##### Methods
 * `instance opts`:
-   - `expire:number`: specify number when cache should expire, example: 0.1=== 10min, -1 === never/indefinite
+   - `expire:string`: valid format 1h, 20m, 59s (h/m/s)
    - `cacheDir:string`: optional when setting custom cache path, must provide full path, example: `path.join(__dirname, "./mycache")`
    -  `autoDeleteLimit:number`: optional to allow recycle old files first by limit specified, works together with `fileLimit(number)`
 
@@ -36,7 +36,7 @@ var debug = true // display any warnings
 
 const opts = {
     autoDeleteLimit: 15, // auto delete files by specified limit
-    expire:0.1 // 10min // or -1 (no limit/indefinite)
+    expire:'2h', //valid format 1h, 20m, 59s (h/m/s)
     // cacheDir: >> full path // defaults to `./cache` dir at root of simplecachex app
 }
 

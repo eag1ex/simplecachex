@@ -13,13 +13,14 @@
    -  `autoDeleteLimit:number`: optional to allow recycle old files first by limit specified, works together with `fileLimit(number)`
 
 * `expireIn (getter)` : check expire date
+* `exists(cacheName):boolean`: check if name pointing to data file exists
 * `getAll()` : Read all available cache before expires
-* `write(fileName, data):void` : Write new cache, with timestamp 
-* `update(fileName, data)` : Update/ and return existing cache, in a new file with new timestamp
-* `load(fileName)` : Load latest (by timestamp) cache before if exists.
+* `write(cacheName, data):void` : Write new cache, with timestamp 
+* `update(cacheName, data)` : Update/ and return existing cache, in a new file with new timestamp
+* `load(cacheName)` : Load latest (by timestamp) cache before if exists.
 * `fileLimit(limit:Number)` : recycle old files from `cacheDir` by limit number, can only use this method manualy when autoDeleteLimit is not set or autoDeleteLimit=0
 - `data` : Data can be a string, array, or object
-- `fileName` : name cannot include any file extension, or underscore
+- `cacheName` : name cannot include any file extension, or underscore
 - `debug:Boolean` : You can enable debug to see any errors or warnings
 - `expire:Number`: Set your expire time, default is 1 hour.
 

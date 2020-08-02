@@ -6,7 +6,7 @@
  * * A Local to file data store, for testing purposes only
  * * In live environment this is not save or desirable, you may want to use `Redis` or your database for holding temp data information
  * * files are stored as per setting in `./cache` dir
- * * every file is appended with {fileName}_cache_{timestamp}.json
+ * * every file is appended with {cacheName}_cache_{timestamp}.json
  */
 
 /**
@@ -311,42 +311,42 @@ module.exports = () => {
             }
         }
 
-        errHandler(fileName, _where) {
-            if (!fileName) {
-                if (this.debug) onerror(`${_where} fileName must be set`)
+        errHandler(cacheName, _where) {
+            if (!cacheName) {
+                if (this.debug) onerror(`${_where} cacheName must be set`)
                 return true
             }
-            if (!isString(fileName)) {
-                if (this.debug) onerror(`${_where} fileName must be a string`)
+            if (!isString(cacheName)) {
+                if (this.debug) onerror(`${_where} cacheName must be a string`)
                 return true
             }
-            if(fileName.split(' ').length>1){
-                if (this.debug) onerror(`${_where} fileName must cannot have spaces`)
+            if(cacheName.split(' ').length>1){
+                if (this.debug) onerror(`${_where} cacheName must cannot have spaces`)
                 return true
             }
-            if (fileName.indexOf('.json') !== -1) {
-                if (this.debug) onerror(`${_where} must provide fileName without .json extention`)
+            if (cacheName.indexOf('.json') !== -1) {
+                if (this.debug) onerror(`${_where} must provide cacheName without .json extention`)
                 return true
             }
-            if (fileName.length < 3) {
-                if (this.debug) onerror(`${_where} fileName must be longer then 3`)
-                return true
-            }
-
-            if (fileName.indexOf('_') !== -1) {
-                if (this.debug) onerror(`${_where} fileName invalid format, cannot include '_'`)
+            if (cacheName.length < 3) {
+                if (this.debug) onerror(`${_where} cacheName must be longer then 3`)
                 return true
             }
 
-            if(fileName.indexOf(this.cachePrefix)!==-1){
-                if (this.debug) onerror(`${_where} fileName cannot include same name as cachePrefix: ${this.cachePrefix}`)
+            if (cacheName.indexOf('_') !== -1) {
+                if (this.debug) onerror(`${_where} cacheName invalid format, cannot include '_'`)
                 return true
             }
 
-            // test invalid fileName chars
+            if(cacheName.indexOf(this.cachePrefix)!==-1){
+                if (this.debug) onerror(`${_where} cacheName cannot include same name as cachePrefix: ${this.cachePrefix}`)
+                return true
+            }
+
+            // test invalid cacheName chars
             let testFileChars = new RegExp('[/\\?%*:|"<>]','g')
-            if(testFileChars.test(fileName)){
-                if (this.debug) onerror(`${_where} fileName invalid format characters: [/\\?%*:|"<>] `)
+            if(testFileChars.test(cacheName)){
+                if (this.debug) onerror(`${_where} cacheName invalid format characters: [/\\?%*:|"<>] `)
                 return true
             }
 
@@ -358,12 +358,12 @@ module.exports = () => {
         /**
          * @write
          * * write file to cache dir
-         * * must provide {fileName} and {data}
-         * * file written in format: {fileName}_cache_{timestamp}.json
+         * * must provide {cacheName} and {data}
+         * * file written in format: {cacheName}_cache_{timestamp}.json
          * return boolean
          */
-        write(fileName='', data) {
-            if (this.errHandler(fileName, 'write')) return false
+        write(cacheName='', data) {
+            if (this.errHandler(cacheName, 'write')) return false
             if (isFalsy(data)) {
                 if (this.debug) warn('[write] cannot set falsy values')
                 return false
@@ -371,7 +371,7 @@ module.exports = () => {
 
             // NOTE only delete files by limit when calling `write` method directly and  `autoDeleteLimit` is larger then 0
             this.fileLimit(this.autoDeleteLimit, true)
-            let newFile = path.join(this.cacheDir, `${fileName}_${this.cachePrefix}_${this.expire}.json`) ||''
+            let newFile = path.join(this.cacheDir, `${cacheName}_${this.cachePrefix}_${this.expire}.json`) ||''
 
             /** 
              * - update or write to existing file if keepLast is set that file still exists, or keep creating new file
@@ -381,7 +381,7 @@ module.exports = () => {
                     let firstFile = this.listFiles[0]
                     if(firstFile){
                         let firstFileName = firstFile.split(this.cachePrefix)[0].replace(/_/g,'') ||''
-                        if ((firstFileName.indexOf(fileName)===0 && firstFileName.length===fileName.length) && (fileName && firstFileName)) {
+                        if ((firstFileName.indexOf(cacheName)===0 && firstFileName.length===cacheName.length) && (cacheName && firstFileName)) {
                             let testFile = path.join(this.cacheDir,  firstFile)
                             if(fs.existsSync(testFile)) {
                                 newFile = testFile
@@ -390,7 +390,7 @@ module.exports = () => {
                     }  
                 }
             }
-            //console.log('new file?',`${fileName}_cache_${this.expire}.json`)
+            //console.log('new file?',`${cacheName}_cache_${this.expire}.json`)
             try {
                 fs.writeFileSync(newFile, JSON.stringify(data))
                 return true
@@ -400,29 +400,39 @@ module.exports = () => {
             }
         }
 
+        /** 
+         * @exists
+         * @param cacheName name poiting to your data file
+         * @returns boolean
+        */
+        exists(cacheName=''){
+            if(!cacheName) return false
+           return !isFalsy(this.load(cacheName))
+        }
+
         /**
          * @update
          * update with last cached file, 2 items must be eaqul type, array or object
          * * returns updated data or false
          */
-        update(fileName, newData) {
-            if (this.errHandler(fileName, 'update')) return false
+        update(cacheName, newData) {
+            if (this.errHandler(cacheName, 'update')) return false
             if (isFalsy(newData)) {
                 if (this.debug) warn('[update] cannot set falsy values')
                 return false
             }
 
-            let sourceData = this.load(fileName)
+            let sourceData = this.load(cacheName)
             if (isEmpty(sourceData)) return false
 
             if (isObject(sourceData) && isObject(newData)) {
                 let merged = merge(sourceData, newData) || {}
-                let done = this.write(fileName, merged)
+                let done = this.write(cacheName, merged)
                 if (done) return merged
             }
             if (isArray(sourceData) && isArray(newData)) {
                 let merged = [].concat(newData, sourceData)
-                let done = this.write(fileName, merged)
+                let done = this.write(cacheName, merged)
                 if (done) return merged
             } else {
                 warn(`you can only update/merge data with last cache that is of eaqul type!`)
@@ -464,14 +474,14 @@ module.exports = () => {
          * load available data that hasn't expired
          * * return data
          */
-        load(fileName) {
+        load(cacheName) {
 
-            if (this.errHandler(fileName, 'load')) return false
+            if (this.errHandler(cacheName, 'load')) return false
 
             try {
-                let foundFile = this.findMatch(fileName)
+                let foundFile = this.findMatch(cacheName)
                 if (!foundFile) {
-                    if (this.debug) log(`${fileName} file not found, or expired`)
+                    if (this.debug) log(`${cacheName} file not found, or expired`)
                     return null
                 }
                 // NOTE readFileSync works better then require
@@ -479,7 +489,7 @@ module.exports = () => {
                 let d2 = JSON.parse(fs.readFileSync(`${this.cacheDir}/${foundFile}.json`))
                 return d2|| null
             } catch (err) {
-                if (this.debug) onerror(`${fileName} file not found, or expired`)
+                if (this.debug) onerror(`${cacheName} file not found, or expired`)
                 return null
             }
         }

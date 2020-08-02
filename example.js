@@ -16,17 +16,21 @@ const sc = new SimpleCache(opts, debug)
 
 //sc.fileLimit(2) // NOTE direct call is ignored when autoDeleteLimit>0
 
-var fName = 'job-2433' // has format restriction validation, enable `debug to see any errors or warnings`
+var cacheName = 'job-b' // has format restriction validation, enable `debug to see any errors or warnings`
 var data = [{ bankName: 'Swiss Bank', assets: 10000 }]//,
     //{ bankName: 'Deutsche Bank 9', assets: 10000 }] // can be string or array/object of data
 
-sc.write(fName, data)
-// sc.write(fName, data)
-// sc.write(fName, data)
 
-// update existing `fName` with new data
-var newData = [{ bankName: 'China Bank',assets:20000 }] 
-sc.update(fName, newData)
+// sc.write(cacheName, data)
+// sc.write(cacheName, data)
+
+// update existing `cacheName` with new data
+if (sc.exists(cacheName)) {
+    var newData = [{ bankName: 'China Bank', assets: 20000 }]
+    sc.update(cacheName, newData)
+} else {
+    sc.write(cacheName, data)
+}
 
 // check expire
 //  sc.expireIn

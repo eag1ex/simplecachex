@@ -27,7 +27,11 @@ module.exports = () => {
             this._expireIn = null
             this.autoDeleteLimit = Number(opts.autoDeleteLimit) || 0 // NOTE check file limit every time new file is being created, when enabled (number provided), then set method `fileLimit()` can no longer be used maualy, but controlled by this setting
             if ((this.cacheDir || "").length < 2) throw ('provided wrong cacheDir')
-            this.makeDir(this.cacheDir)
+
+            if(this.makeDir(this.cacheDir)===null){
+                throw('error makeDir')
+            }
+            
             this.removeExpired()
         }
 
@@ -61,12 +65,32 @@ module.exports = () => {
         }
 
         /** 
-         * - test if dir exists or make new one
+         * @makeDir
+         * test if dir exists or make new one
         */
         makeDir(dirName) {
-            //
-            if (!fs.lstatSync(dirName).isDirectory()) {
+
+            let testSubName = new RegExp('[?!*,;#$@|"<>]', 'g')
+            if (testSubName.test(dirName) || /\s/.test(dirName) || !dirName) {
+                if (this.debug) onerror(`[addSubDir] dirName invalid, [?!%*:,;#$@|"<>], and no spaces allowed!`)
+                return null
+            }
+
+            if (!fs.existsSync(dirName)) {
+
+                /** 
+                 * to consider other types
+                    stats.isFile()
+                    stats.isDirectory()
+                    stats.isBlockDevice()
+                    stats.isCharacterDevice()
+                    stats.isSymbolicLink() (only valid with fs.lstat())
+                    stats.isFIFO()
+                    stats.isSocket()
+                */
+
                 try {
+                    fs.existsSync()
                     fs.mkdirSync(dirName);
                     return true
                 } catch (err) {
@@ -82,7 +106,7 @@ module.exports = () => {
         }
 
         /** 
-         * - every file is assigned with name `cache`
+         * every file is assigned with name `cache`
         */
         get cachePrefix() {
             return `cache`
@@ -205,7 +229,6 @@ module.exports = () => {
         }
 
 
-
         /** 
          * @allUniqFiles
          * - return all files that are uniq vy fname_
@@ -264,9 +287,9 @@ module.exports = () => {
             }
 
             // test invalid cacheName chars
-            let testFileChars = new RegExp('[/\\?%*:,;#$@|"<>]', 'g')
+            let testFileChars = new RegExp('[/\\?%!*:,;#$|"<>]', 'g')
             if (testFileChars.test(cacheName)) {
-                if (this.debug) onerror(`${_where} cacheName invalid format characters: [/\\?%*:|"<>] `)
+                if (this.debug) onerror(`${_where} cacheName invalid format characters: [/\\?!%*:,;#$|"<>] `)
                 return true
             }
 

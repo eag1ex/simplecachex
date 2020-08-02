@@ -109,10 +109,12 @@ module.exports = () => {
         write(data, cacheName= '',__internal) {
 
             if (this.errHandler(cacheName, 'write')) return false
+
             if (isFalsy(data)) {
                 if (this.debug) warn('[write] cannot set falsy values')
                 return false
             }
+
             const isValidFormat = isArray(data) || isObject(data) ? true : false
             if (!isValidFormat) {
                 if (this.debug) onerror(`[write] cannot write data because its neither array, or object`)
@@ -121,7 +123,8 @@ module.exports = () => {
 
             // NOTE only delete files by limit when calling `write` method directly and  `autoDeleteLimit` is larger then 0
             this.fileLimit(this.autoDeleteLimit, true)
-            let newFile = path.join(this.cacheDir, `${cacheName}_${this.cachePrefix}_${this.expire}.json`) || ''
+            let newFile = path.join(this.cacheDir, 
+                                    `${cacheName}_${this.cachePrefix}_${this.expire}.json`) || ''
 
             /** 
              * - update or write to existing file if keepLast is set that file still exists, or keep creating new file
@@ -177,8 +180,8 @@ module.exports = () => {
         */
         addSubDir(subName = '') {
 
-            let testSubName = new RegExp('[?%*:,;#$@|"<>]', 'g')
-            if (testSubName.test(subName) || /\s/.test(testSubName) || !subName) {
+            let testSubName = new RegExp('[?!%*:,;#$@|"<>]', 'g')
+            if (testSubName.test(subName) || /\s/.test(subName) || !subName) {
                 if (this.debug) onerror(`[addSubDir] subName invalid, [?%*:,;#$@|"<>], and no spaces allowed!`)
                 return this
             }
@@ -187,12 +190,12 @@ module.exports = () => {
             if (subName.indexOf('/') === 0) subName = `.` + subName
             if (subName.indexOf('./') !==0 ) subName = `./` + subName
             let subDirPath = path.join(this.cacheDir, subName)
-            log({subDirPath})
             let exists = this.makeDir(subDirPath)
 
             if (exists===false) {
-                if (this.debug) warn(`[addSubDir] subDir already exists: ${subDirPath}`)
+               // if (this.debug) warn(`[addSubDir] subDir already exists: ${subDirPath}`)
             }
+             log({subDirPath})
             // if it was null means some error and sub not written!!
             if(typeof exists ==='boolean') this.routeFile = subDirPath
 
@@ -225,6 +228,7 @@ module.exports = () => {
             if (this.smartUpdate) {
                 if (this.debug) log(`[update] if you want to use update(), disable smartUpdate option, waste of resources!`)
             }
+
             return this._combineData(cacheName, newData, false)
         }
 
@@ -248,44 +252,12 @@ module.exports = () => {
                 // let d = require(`${this.cacheDir}/${foundFile}.json`) || null
                 let d2 = JSON.parse(fs.readFileSync(`${this.cacheDir}/${foundFile}.json`))
                 return d2 || null
+
             } catch (err) {
                 if (this.debug) onerror(`${cacheName} file not found, or expired`)
                 return null
             }
         }
-
-        /**
-         * @getAll
-         * retrieve all cache from current non-expired period
-         */
-        getAll() {
-            let allCache = {}
-            try {
-                // latest first
-                let dir = this.listFiles
-
-                const load = (file) => {
-                    let fileName = file.split('_')[0]
-                    let d = this.load(fileName)
-                    allCache[fileName] = d
-                }
-
-                dir.forEach((file, inx) => {
-                    let timestamp = this.fileTimeStamp(file)
-                    if (timestamp !== null) {
-                        let curTime = new Date().getTime()
-                        if (curTime < timestamp) return load(file)
-                        if (this.keepLast && inx === 0) load(file)
-                    }
-                })
-
-                return allCache
-            } catch (err) {
-                if (this.debug) onerror(`[getAll]`, err.toString())
-                return null
-            }
-        }
-
 
         /** 
          * - combine two data types, conditionaly based on type

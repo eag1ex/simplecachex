@@ -6,7 +6,7 @@ const path = require('path')
 var debug = true // display any warnings
 
 const opts = {
-    smartUpdate:true, // write() method will perform update() check if data exists it will merge it
+    //smartUpdate:true, // write() method will perform update() check if data exists it will merge it
     keepLast:true, // keep last uniq file
     expire:Infinity, //'10s', // {time/Format}  "1h" "2m" "30s" (h/m/s)
     cacheDir:path.join(__dirname, "./mycache"),
@@ -22,7 +22,7 @@ var data = [{ bankName: 'Swiss Bank', assets: 2222 }]//,
     //{ bankName: 'Deutsche Bank 9', assets: 10000 }] // 
 
     sc.addSubDir('sub-1')
-       .write(cacheName, data)
+       .write(data,cacheName)
 // sc.write(data,cacheName)
 
 // update existing `cacheName` with new data

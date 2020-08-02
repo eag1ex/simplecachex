@@ -3,14 +3,16 @@
 * License: `CC BY` 
 
 ### About
-* Simple cache that can be adapted by any application, for server testing or any purpose. Cache is being saved in `./cache` dir.
+* Simple Cache that can be adapted by any application, for server testing or any purpose. Cache is being saved in __{cacheDir}__ dir, can also be used as file database.
 
 ##### Methods
 * `instance opts`:
+   - `keepLast:boolean`: will always keep latest file regardless of expiry or autoDeleteLimit
    - `expire:string`: valid format 1h, 20m, 59s (h/m/s)
    - `cacheDir:string`: optional when setting custom cache path, must provide full path, example: `path.join(__dirname, "./mycache")`
    -  `autoDeleteLimit:number`: optional to allow recycle old files first by limit specified, works together with `fileLimit(number)`
 
+* `expireIn (getter)` : check expire date
 * `getAll()` : Read all available cache before expires
 * `write(fileName, data):void` : Write new cache, with timestamp 
 * `update(fileName, data)` : Update/ and return existing cache, in a new file with new timestamp
@@ -35,8 +37,9 @@ const SimpleCache = require('./simpleCacheX')()
 var debug = true // display any warnings
 
 const opts = {
+    // keepLast:true, // always keep last file
     autoDeleteLimit: 15, // auto delete files by specified limit
-    expire:'2h', //valid format 1h, 20m, 59s (h/m/s)
+    expire:'2h', // {time/Format}  "1h" "2m" "30s" (h/m/s)
     // cacheDir: >> full path // defaults to `./cache` dir at root of simplecachex app
 }
 
@@ -44,8 +47,8 @@ const sc = new SimpleCache(opts, debug)
 
 // get all available cache 
 sc.getAll()
-var fName = 'bankData' // has format restriction validation, enable `debug to see any errors or warnings`
 
+var fName = 'bankData' // has format restriction validation, enable `debug to see any errors or warnings`
 var data = [{bankName:'Swiss Bank', assets:10000},
             {bankName:'Deutsche Bank', assets:10000}] // can be string or array/object of data
 

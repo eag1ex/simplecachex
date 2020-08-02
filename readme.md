@@ -17,8 +17,8 @@
 * `expireIn (getter)` : check expire date
 * `exists(cacheName):boolean`: check if name pointing to data file exists
 * `getAll()` : Read all available cache before expires
-* `write(cacheName, data):void` : Write new cache, with timestamp. Can only provide data as object{} or array[], if `smartUpdate=true` was set then will also perform update first.
-* `update(cacheName, data)` : Update/ and return existing cache, in a new file with new timestamp. Can only provide data as object{} or array[] 
+* `write(data,cacheName,):void` : Write new cache, with timestamp. Can only provide data as object{} or array[], if `smartUpdate=true` was set then will also perform update first.
+* `update( data,cacheName)` : Update/ and return existing cache, in a new file with new timestamp. Can only provide data as object{} or array[] 
 * `load(cacheName)` : Load latest (by timestamp) cache before if exists.
 * `fileLimit(limit:Number)` : recycle old files from `cacheDir` by limit number, can only use this method manualy when autoDeleteLimit is not set or autoDeleteLimit=0
 - `data` : Can only provide data as object{} or array[] 

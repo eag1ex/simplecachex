@@ -22,7 +22,6 @@ module.exports = () => {
 
         }
 
-
         get expireIn() {
             return this._expireIn
         }
@@ -107,7 +106,8 @@ module.exports = () => {
          * @param {array/object} data required, pust prodive either array[] or object{} data formats  
          * return boolean
          */
-        write(cacheName = '', data, __internal) {
+        write(data, cacheName= '',__internal) {
+
             if (this.errHandler(cacheName, 'write')) return false
             if (isFalsy(data)) {
                 if (this.debug) warn('[write] cannot set falsy values')
@@ -157,6 +157,48 @@ module.exports = () => {
             }
         }
 
+        // TODO lets not use routeFile concept, instead use exampel: /subdir/cacheName
+        // toSubDir(subName) {
+        //     this.addSubDir(subName) // generates this.routeFile
+        //     if (!this.routeFile) {
+        //         if (this.debug) warn(`[toSubDir] subName invalid`)
+        //         return this
+        //     }
+        //     if (!fs.lstatSync(this.routeFile).isDirectory() && !this.routeFile) {
+        //         this.routeFile = null
+        //         if (this.debug) warn(`[toSubDir] subName invalid, or an error`)
+        //     }
+
+        //     return this
+        // }
+
+        /** 
+         * - adds support for subdir inside current cacheDir
+        */
+        addSubDir(subName = '') {
+
+            let testSubName = new RegExp('[?%*:,;#$@|"<>]', 'g')
+            if (testSubName.test(subName) || /\s/.test(testSubName) || !subName) {
+                if (this.debug) onerror(`[addSubDir] subName invalid, [?%*:,;#$@|"<>], and no spaces allowed!`)
+                return this
+            }
+
+            this.d = null
+            if (subName.indexOf('/') === 0) subName = `.` + subName
+            if (subName.indexOf('./') !==0 ) subName = `./` + subName
+            let subDirPath = path.join(this.cacheDir, subName)
+            log({subDirPath})
+            let exists = this.makeDir(subDirPath)
+
+            if (exists===false) {
+                if (this.debug) warn(`[addSubDir] subDir already exists: ${subDirPath}`)
+            }
+            // if it was null means some error and sub not written!!
+            if(typeof exists ==='boolean') this.routeFile = subDirPath
+
+            return this
+        }
+
         /** 
          * @exists
          * @param cacheName name poiting to your data file
@@ -167,14 +209,13 @@ module.exports = () => {
             return !isFalsy(this.load(cacheName))
         }
 
-     
 
         /**
          * @update
          * update with last cached file, 2 items must be eaqul type, array or object
          * @returns updated cacheName/data or false
          */
-        update(cacheName, newData) {
+        update(newData,cacheName) {
             if (this.errHandler(cacheName, 'update')) return null
             if (isFalsy(newData)) {
                 if (this.debug) warn('[update] cannot set falsy values')
@@ -252,32 +293,32 @@ module.exports = () => {
          * @param origin required
          * @returns merged data or null
         */
-       _combineData(cacheName, newData, __internal = true) {
-        let sourceData = this.load(cacheName)
-        if (isEmpty(sourceData)) return null
+        _combineData(cacheName, newData, __internal = true) {
+            let sourceData = this.load(cacheName)
+            if (isEmpty(sourceData)) return null
 
-        if (isObject(sourceData) && isObject(newData)) {
-            let merged = merge(sourceData, newData) || {}
-            if (__internal) return merged
-            else {
-                let done = this.write(cacheName, merged)
-                if (done) return merged
-            }
-        }
-
-        if (isArray(sourceData) && isArray(newData)) {
-            let merged = [].concat(newData, sourceData)
-            if (__internal) return merged
-            else {
-                let done = this.write(cacheName, merged)
-                if (done) return merged
+            if (isObject(sourceData) && isObject(newData)) {
+                let merged = merge(sourceData, newData) || {}
+                if (__internal) return merged
+                else {
+                    let done = this.write( merged,cacheName)
+                    if (done) return merged
+                }
             }
 
-        } else {
-            warn(`can only update/merge cache data that is of equal type!`)
-            return null
+            if (isArray(sourceData) && isArray(newData)) {
+                let merged = [].concat(newData, sourceData)
+                if (__internal) return merged
+                else {
+                    let done = this.write( merged,cacheName)
+                    if (done) return merged
+                }
+
+            } else {
+                warn(`can only update/merge cache data that is of equal type!`)
+                return null
+            }
         }
-    }
 
     }
     return SimpleCacheX

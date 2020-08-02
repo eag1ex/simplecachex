@@ -8,12 +8,14 @@ module.exports = () => {
     return class Libs {
         constructor(opts = {}, debug = false) {
             this.debug = debug
-
+           
             // NOTE should be called in head of constructor
             this._presets(opts)
         }
-        
+
         _presets(opts) {
+            this.routeFile = null // helps us where to store our next file, especially when using `toSubDir()`
+            this.d = null // temp data holder
             // this._expire = 1 // default, or in hours >  (1, 3, 5, 0.5)
             this.keepLast = opts.keepLast || false // allow for latest cache file to remain, and not expire
             this._cacheDir = opts.cacheDir || null // or use default instead
@@ -42,6 +44,37 @@ module.exports = () => {
             this._expireIn = { date: newTime, nice: expireIn }
             if (this.debug) log({ message: 'cache will expire at', expireIn })
             this._expire = newTime
+        }
+
+        /** 
+          * @listFiles
+          * - list files in order from latest first
+         */
+        get listFiles() {
+            return (fs.readdirSync(this.cacheDir) || [])
+                .map(n => {
+                    let dir = path.join(this.cacheDir, n)
+                    if (fs.lstatSync(dir).isDirectory()) return null
+                    else return n
+                }).filter(n => !!n)
+                .sort((a, b) => this.fileTimeStamp(b) - this.fileTimeStamp(a))
+        }
+
+        /** 
+         * - test if dir exists or make new one
+        */
+        makeDir(dirName) {
+            //
+            if (!fs.lstatSync(dirName).isDirectory()) {
+                try {
+                    fs.mkdirSync(dirName);
+                    return true
+                } catch (err) {
+                    if (this.debug) onerror('[write]', err.toString())
+                    return null
+                }
+            }
+            return false
         }
 
         get defaultTime() {
@@ -92,7 +125,7 @@ module.exports = () => {
             // NOTE set time far in to the future
             if (timeValue === Infinity) {
                 timeValue = `11111111h`
-                if (this.debug) log(`expire has been to never expire`)
+                if (this.debug) log(`expire set to never expire`)
             }
             let timeFormat = this.validFormat(timeValue)
             if (!timeFormat.valid) {
@@ -109,21 +142,6 @@ module.exports = () => {
             return d2.getTime()
         }
 
-        /** 
-     * - test if dir exists or make new one
-    */
-        makeDir(dirName) {
-            if (!fs.existsSync(dirName)) {
-                try {
-                    fs.mkdirSync(dirName);
-                    return true
-                } catch (err) {
-                    if (this.debug) onerror('[write]', err.toString())
-                    return false
-                }
-            }
-            return true
-        }
 
         /**
          * - keep desired file limit in your `cacheDir` path
@@ -203,21 +221,14 @@ module.exports = () => {
             }).filter(n => !!n), 'fname')
         }
 
-        /** 
-         * - list files in order from latest first
-        */
-        get listFiles() {
-            return (fs.readdirSync(this.cacheDir) || []).sort((a, b) => {
-                return this.fileTimeStamp(b) - this.fileTimeStamp(a)
-            })
-        }
 
+        
         /** 
          * - return ordered fileListTimes
          * - keeps the list from first enquiry
         */
         get fileListTimes() {
-            return (fs.readdirSync(this.cacheDir) || []).map(n => this.fileTimeStamp(n)).sort((a, b) => b - a)
+            return this.listFiles.map(n => this.fileTimeStamp(n)).sort((a, b) => b - a)
         }
 
         errHandler(cacheName, _where) {
@@ -253,7 +264,7 @@ module.exports = () => {
             }
 
             // test invalid cacheName chars
-            let testFileChars = new RegExp('[/\\?%*:|"<>]', 'g')
+            let testFileChars = new RegExp('[/\\?%*:,;#$@|"<>]', 'g')
             if (testFileChars.test(cacheName)) {
                 if (this.debug) onerror(`${_where} cacheName invalid format characters: [/\\?%*:|"<>] `)
                 return true

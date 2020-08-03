@@ -11,7 +11,7 @@
 module.exports = () => {
 
     const fs = require('fs')
-    const { merge, isEmpty } = require('lodash')
+    const { merge, isEmpty, isFunction } = require('lodash')
     const path = require('path')
     const { log, warn, onerror, isArray, isObject, isFalsy } = require('x-utils-es/umd')
     const Libs = require('./simpleCacheX.libs')()
@@ -104,9 +104,10 @@ module.exports = () => {
          * * must provide {cacheName} and {data}
          * * file written in format: {cacheName}_cache_{timestamp}.json
          * @param {array/object} data required, pust prodive either array[] or object{} data formats  
+         * @param `cb((source,newData)=>)` optional, make your own merge betweend sources, must return callback or no update will be saved, and will override as new !
          * return boolean
          */
-        write(data, cacheName= '',__internal) {
+        write(data, cacheName = '', cb,__internal=false) {
 
             if (this.errHandler(cacheName, 'write')) return false
 
@@ -144,9 +145,14 @@ module.exports = () => {
                 }
             }
 
+          
+            if(!this.smartUpdate && isFunction(cb)){
+                if(this.debug) warn(`[write] callback doesnt work without opts.smartUpdate setting enabled`)
+            }
+
             // NOTE instead of checking with exists(cacheName) or doing update then write, when smartUpdate is set we can just call write() instead
             if (this.smartUpdate) {
-                let _combineData = this._combineData(cacheName, data, true)
+                let _combineData = this._combineData(cacheName, data,cb, true)
                 if (_combineData) data = _combineData
             }
 
@@ -175,32 +181,34 @@ module.exports = () => {
         //     return this
         // }
 
+
+        // TODO
         /** 
          * - adds support for subdir inside current cacheDir
         */
-        addSubDir(subName = '') {
+        // addSubDir(subName = '') {
 
-            let testSubName = new RegExp('[?!%*:,;#$@|"<>]', 'g')
-            if (testSubName.test(subName) || /\s/.test(subName) || !subName) {
-                if (this.debug) onerror(`[addSubDir] subName invalid, [?%*:,;#$@|"<>], and no spaces allowed!`)
-                return this
-            }
+        //     let testSubName = new RegExp('[?!%*:,;#$@|"<>]', 'g')
+        //     if (testSubName.test(subName) || /\s/.test(subName) || !subName) {
+        //         if (this.debug) onerror(`[addSubDir] subName invalid, [?%*:,;#$@|"<>], and no spaces allowed!`)
+        //         return this
+        //     }
 
-            this.d = null
-            if (subName.indexOf('/') === 0) subName = `.` + subName
-            if (subName.indexOf('./') !==0 ) subName = `./` + subName
-            let subDirPath = path.join(this.cacheDir, subName)
-            let exists = this.makeDir(subDirPath)
+        //     this.d = null
+        //     if (subName.indexOf('/') === 0) subName = `.` + subName
+        //     if (subName.indexOf('./') !==0 ) subName = `./` + subName
+        //     let subDirPath = path.join(this.cacheDir, subName)
+        //     let exists = this.makeDir(subDirPath)
 
-            if (exists===false) {
-               // if (this.debug) warn(`[addSubDir] subDir already exists: ${subDirPath}`)
-            }
-             log({subDirPath})
-            // if it was null means some error and sub not written!!
-            if(typeof exists ==='boolean') this.routeFile = subDirPath
+        //     if (exists===false) {
+        //        // if (this.debug) warn(`[addSubDir] subDir already exists: ${subDirPath}`)
+        //     }
+        //      log({subDirPath})
+        //     // if it was null means some error and sub not written!!
+        //     if(typeof exists ==='boolean') this.routeFile = subDirPath
 
-            return this
-        }
+        //     return this
+        // }
 
         /** 
          * @exists
@@ -216,9 +224,11 @@ module.exports = () => {
         /**
          * @update
          * update with last cached file, 2 items must be eaqul type, array or object
+         * @param newData required, array{}, or object{}
+         * @param cb((source,newData)=>), optional, make your own merge decisions before update, must return callback, or nothing will save
          * @returns updated cacheName/data or false
          */
-        update(newData,cacheName) {
+        update(newData,cacheName, cb) {
             if (this.errHandler(cacheName, 'update')) return null
             if (isFalsy(newData)) {
                 if (this.debug) warn('[update] cannot set falsy values')
@@ -229,7 +239,7 @@ module.exports = () => {
                 if (this.debug) log(`[update] if you want to use update(), disable smartUpdate option, waste of resources!`)
             }
 
-            return this._combineData(cacheName, newData, false)
+            return this._combineData(cacheName, newData, ( isFunction(cb) ? cb:null ) , false)
         }
 
 
@@ -262,27 +272,47 @@ module.exports = () => {
         /** 
          * - combine two data types, conditionaly based on type
          * @param cacheName required
-         * @param origin required
+         * @param newData required
+         * @param cb((source,newData)=>) optional, make your own merge betweend sources, must return callback
          * @returns merged data or null
         */
-        _combineData(cacheName, newData, __internal = true) {
+        _combineData(cacheName, newData, cb, __internal = true) {
             let sourceData = this.load(cacheName)
             if (isEmpty(sourceData)) return null
 
             if (isObject(sourceData) && isObject(newData)) {
-                let merged = merge(sourceData, newData) || {}
-                if (__internal) return merged
-                else {
-                    let done = this.write( merged,cacheName)
+                let merged
+                log()
+                if (isFunction(cb))  {
+                    merged = cb(sourceData, newData)
+                    if(!merged){
+                        if(this.debug) warn(`[combineData] callback didnt return any data, nothing will be saved`)
+                        return 
+                    }
+                    return merged
+                }
+                if(!isFunction(cb)) merged = merge(sourceData, newData) || {}
+                if (__internal ) return merged
+                else if(!__internal){
+                    let done = this.write( merged,cacheName,null,null)
                     if (done) return merged
                 }
             }
 
             if (isArray(sourceData) && isArray(newData)) {
-                let merged = [].concat(newData, sourceData)
+                let merged 
+                if (isFunction(cb)) {
+                    merged = cb(sourceData, newData)
+
+                    if (!merged) {
+                        if (this.debug) warn(`[combineData] callback didnt return any data, nothing will be saved`)
+                        return
+                    }
+                } 
+                if(!isFunction(cb) ) merged = [].concat(sourceData,newData )
                 if (__internal) return merged
-                else {
-                    let done = this.write( merged,cacheName)
+                else if (!__internal){
+                    let done = this.write( merged,cacheName,null,null)
                     if (done) return merged
                 }
 

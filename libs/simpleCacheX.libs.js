@@ -14,7 +14,7 @@ module.exports = () => {
         }
 
         _presets(opts) {
-            this.routeFile = null // helps us where to store our next file, especially when using `toSubDir()`
+          //TODO  this.routeFile = null // helps us where to store our next file, especially when using `toSubDir()`
             this.d = null // temp data holder
             // this._expire = 1 // default, or in hours >  (1, 3, 5, 0.5)
             this.keepLast = opts.keepLast || false // allow for latest cache file to remain, and not expire

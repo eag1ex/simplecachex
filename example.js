@@ -6,7 +6,7 @@ const path = require('path')
 var debug = true // display any warnings
 
 const opts = {
-    //smartUpdate:true, // write() method will perform update() check if data exists it will merge it
+    smartUpdate:true, // write() method will perform update() check if data exists it will merge it
     keepLast:true, // keep last uniq file
     expire:Infinity, //'10s', // {time/Format}  "1h" "2m" "30s" (h/m/s)
     cacheDir:path.join(__dirname, "./mycache"),
@@ -18,11 +18,16 @@ const sc = new SimpleCache(opts, debug)
 //sc.fileLimit(2) // NOTE direct call is ignored when autoDeleteLimit>0
 
 var cacheName = 'job-ca' // has format restriction validation, enable `debug to see any errors or warnings`
-var data = [{ bankName: 'Swiss Bank', assets: 2222 }]//,
+var data = [{ bankName: 'Swiss Bank', assets: 0 }]//,
     //{ bankName: 'Deutsche Bank 9', assets: 10000 }] // 
 
-    sc.addSubDir('sub-1')
-       .write(data,cacheName)
+
+// NOTE callback option for additional save/merge options can only be used when smartUpdate is enabled
+// sc.write(data,cacheName,(source, newData)=>{
+//     // NOTE source is data from cache
+//     return [].concat(source,newData)
+// })
+
 // sc.write(data,cacheName)
 
 // update existing `cacheName` with new data

@@ -106,8 +106,9 @@ module.exports = () => {
          * @param {array/object} data required, pust prodive either array[] or object{} data formats  
          * @param `cb((source,newData)=>)` optional, make your own merge betweend sources, must return callback or no update will be saved, and will override as new !
          * return boolean
+         * @param __internal internal use, when smartUpdate is enabled so the write() method doesnt loop on its self and get callstack error
          */
-        write(data, cacheName = '', cb,__internal=false) {
+        write(data, cacheName = '', cb, __internal = false) {
 
             if (this.errHandler(cacheName, 'write')) return false
 
@@ -145,7 +146,6 @@ module.exports = () => {
                 }
             }
 
-          
             if(!this.smartUpdate && isFunction(cb)){
                 if(this.debug) warn(`[write] callback doesnt work without opts.smartUpdate setting enabled`)
             }
@@ -153,9 +153,17 @@ module.exports = () => {
             // NOTE instead of checking with exists(cacheName) or doing update then write, when smartUpdate is set we can just call write() instead
             if (this.smartUpdate) {
                 let _combineData = this._combineData(cacheName, data,cb, true, this.smartUpdate)
-                if (_combineData) data = _combineData
+                if (_combineData.merged) data = _combineData.merged
+                
+                // NOTE delete previous dataPath with witch merged data and save to new file
+                let updatePath = _combineData.updatePath              
+                if(fs.existsSync(updatePath) && updatePath){
+                        if( this.stripRootPath(updatePath)!==this.stripRootPath(newFile)){
+                            this.removeIt(updatePath)  
+                            // log('removed old reference',updatePath)
+                        }
+                }
             }
-
             //console.log('new file?',`${cacheName}_cache_${this.expire}.json`)
             try {
                 fs.writeFileSync(newFile, JSON.stringify(data))
@@ -248,7 +256,7 @@ module.exports = () => {
          * load available data that hasn't expired
          * * return data
          */
-        load(cacheName, smartUpdate) {
+        load(cacheName, smartUpdate, __full) {
 
             if (this.errHandler(cacheName, 'load')) return false
 
@@ -256,16 +264,22 @@ module.exports = () => {
                 let foundFile = this.findMatch(cacheName,smartUpdate)
                 if (!foundFile) {
                     if (this.debug && !smartUpdate) log(`${cacheName} file not found, or expired`)
-                    return null
+                    return __full ? {}: null
                 }
                 // NOTE readFileSync works better then require
                 // let d = require(`${this.cacheDir}/${foundFile}.json`) || null
-                let d2 = JSON.parse(fs.readFileSync(`${this.cacheDir}/${foundFile}.json`))
-                return d2 || null
-
+                let _path = `${this.cacheDir}/${foundFile}.json`
+                let d2 = JSON.parse(fs.readFileSync(_path))
+                // NOTE __full for internal use and flexibility 
+                
+                return __full ? {
+                    data:d2,
+                    path:_path
+                }: d2
+               
             } catch (err) {
                 if (this.debug) onerror(`${cacheName} file not found, or expired`)
-                return null
+                return __full ? {}: null    
             }
         }
 
@@ -277,40 +291,40 @@ module.exports = () => {
          * @returns merged data or null
         */
         _combineData(cacheName, newData, cb, __internal = true, smartUpdate=null) {
-            let sourceData = this.load(cacheName,smartUpdate)
-            if (isEmpty(sourceData)) return null
+            let sourceData = this.load(cacheName,smartUpdate, true)
+            if (isEmpty(sourceData.data)) return {}
 
-            if (isObject(sourceData) && isObject(newData)) {
+            if (isObject(sourceData.data) && isObject(newData)) {
                 let merged
-                log()
+              
                 if (isFunction(cb))  {
-                    merged = cb(sourceData, newData)
+                    merged = cb(sourceData.data, newData)
                     if(!merged){
                         if(this.debug) warn(`[combineData] callback didnt return any data, nothing will be saved`)
-                        return 
+                        return {}
                     }
-                    return merged
+                    return {merged, updatePath:sourceData.path}
                 }
-                if(!isFunction(cb)) merged = merge(sourceData, newData) || {}
-                if (__internal ) return merged
+                if(!isFunction(cb)) merged = merge(sourceData.data, newData) || {}
+                if (__internal ) return {merged, updatePath:sourceData.path}
                 else if(!__internal){
                     let done = this.write( merged,cacheName,null,null)
                     if (done) return merged
                 }
             }
 
-            if (isArray(sourceData) && isArray(newData)) {
+            if (isArray(sourceData.data) && isArray(newData)) {
                 let merged 
                 if (isFunction(cb)) {
-                    merged = cb(sourceData, newData)
+                    merged = cb(sourceData.data, newData)
 
                     if (!merged) {
                         if (this.debug) warn(`[combineData] callback didnt return any data, nothing will be saved`)
-                        return
+                        return {}
                     }
                 } 
-                if(!isFunction(cb) ) merged = [].concat(sourceData,newData )
-                if (__internal) return merged
+                if(!isFunction(cb) ) merged = [].concat(sourceData.data,newData )
+                if (__internal) return {merged, updatePath:sourceData.path}
                 else if (!__internal){
                     let done = this.write( merged,cacheName,null,null)
                     if (done) return merged
@@ -321,7 +335,7 @@ module.exports = () => {
                 return null
             }
         }
-
     }
-    return SimpleCacheX
+
+    return  SimpleCacheX
 }

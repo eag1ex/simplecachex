@@ -17,20 +17,13 @@ const sc = new SimpleCache(opts, debug)
 
 //sc.fileLimit(2) // NOTE direct call is ignored when autoDeleteLimit>0
 
-var cacheName = `cidList1+uid-${new Date().getTime()}` // has format restriction validation, enable `debug to see any errors or warnings`
-var cacheName2 = `cidList3+uid-${new Date().getTime()}` 
-
-var data = [{ bankName: 'Swiss Bank', assets: 0 }]//,
+var cacheName = 'job-ca' // has format restriction validation, enable `debug to see any errors or warnings`
+var data = [{ bankName: 'Swiss Bank', assets: 3 }]//,
     //{ bankName: 'Deutsche Bank 9', assets: 10000 }] // 
 
 
 // NOTE callback option for additional save/merge options can only be used when smartUpdate is enabled
 sc.write(data,cacheName,(source, newData)=>{
-    // NOTE source is data from cache
-    return [].concat(source,newData)
-})
-
-sc.write(data,cacheName2,(source, newData)=>{
     // NOTE source is data from cache
     return [].concat(source,newData)
 })

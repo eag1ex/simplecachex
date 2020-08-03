@@ -203,6 +203,17 @@ module.exports = () => {
             return this
         }
 
+        /** 
+         * @stripRootPath
+         * - strip root path from file, including .json sufix
+         * @returns cacheName
+        */
+        stripRootPath(str = '') {
+            let legalPath = path.join(str)
+            let pathArr = legalPath.split(/\\/).filter(n=>!!n)
+            let cacheName = (pathArr[pathArr.length-1] ||'').replace('.json','')
+            return cacheName
+        }
 
         /** 
          * - get file timestamp from file 

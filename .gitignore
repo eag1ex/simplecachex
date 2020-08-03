@@ -10,6 +10,7 @@ public
 cache
 mycache
 md_test.js
+example-tests.js
 # Docker
 Dockerfile
 docker-compose.yml

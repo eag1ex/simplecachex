@@ -302,14 +302,21 @@ module.exports = () => {
          * find latest match by date
          * return fileName, excluding file extension
          */
-        findMatch(fileName) {
+        findMatch(fileName, smartUpdate) {
             if (this.errHandler(fileName, 'scanFind')) return ''
 
-            let dir = this.listFiles
+            let dir = this.listFiles     
+            let exectMatch = (origin,source)=>{
+                let o = origin.split('_'+this.cachePrefix+'_')[0]
+                return o=== source && o
+            }  
+
             let found = dir.reduce((n, el) => {
-                if (el.indexOf(fileName) !== -1) {
+
+                if (exectMatch(el,fileName )) {
                     let ell = el.split('.json')[0]
-                    let timestamp = ell.split('_')
+                    let joint = '_'+this.cachePrefix +'_'
+                    let timestamp = ell.split(joint)
                     timestamp = timestamp[timestamp.length - 1]
                     if (timestamp) n.push([ell, Number(timestamp)])
                 }
@@ -320,7 +327,7 @@ module.exports = () => {
                 let format = found[0][0]
                 return format
             } else {
-                if (this.debug) onerror(`${fileName} not found in: ${this.cacheDir}`)
+                if (this.debug && !smartUpdate) onerror(`${fileName} not found in: ${this.cacheDir}`)
                 return ''
             }
         }

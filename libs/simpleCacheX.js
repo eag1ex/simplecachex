@@ -152,7 +152,7 @@ module.exports = () => {
 
             // NOTE instead of checking with exists(cacheName) or doing update then write, when smartUpdate is set we can just call write() instead
             if (this.smartUpdate) {
-                let _combineData = this._combineData(cacheName, data,cb, true)
+                let _combineData = this._combineData(cacheName, data,cb, true, this.smartUpdate)
                 if (_combineData) data = _combineData
             }
 
@@ -248,14 +248,14 @@ module.exports = () => {
          * load available data that hasn't expired
          * * return data
          */
-        load(cacheName) {
+        load(cacheName, smartUpdate) {
 
             if (this.errHandler(cacheName, 'load')) return false
 
             try {
-                let foundFile = this.findMatch(cacheName)
+                let foundFile = this.findMatch(cacheName,smartUpdate)
                 if (!foundFile) {
-                    if (this.debug) log(`${cacheName} file not found, or expired`)
+                    if (this.debug && !smartUpdate) log(`${cacheName} file not found, or expired`)
                     return null
                 }
                 // NOTE readFileSync works better then require
@@ -276,8 +276,8 @@ module.exports = () => {
          * @param cb((source,newData)=>) optional, make your own merge betweend sources, must return callback
          * @returns merged data or null
         */
-        _combineData(cacheName, newData, cb, __internal = true) {
-            let sourceData = this.load(cacheName)
+        _combineData(cacheName, newData, cb, __internal = true, smartUpdate=null) {
+            let sourceData = this.load(cacheName,smartUpdate)
             if (isEmpty(sourceData)) return null
 
             if (isObject(sourceData) && isObject(newData)) {

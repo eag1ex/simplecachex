@@ -50,6 +50,9 @@ module.exports = () => {
             this._expire = newTime
         }
 
+        validPaths(){
+
+        }
         /** 
           * @listFiles
           * - list files in order from latest first
@@ -57,6 +60,12 @@ module.exports = () => {
         get listFiles() {
             return (fs.readdirSync(this.cacheDir) || [])
                 .map(n => {
+                    
+                    if(n && (n ||'').indexOf('_'+this.cachePrefix+'_')===-1 ){
+                        if(this.debug) warn(`[listFiles]`, `file: { ${n} } has invalid path name, ignoring`)
+                        return null
+                    }
+
                     let dir = path.join(this.cacheDir, n)
                     if (fs.lstatSync(dir).isDirectory()) return null
                     else return n

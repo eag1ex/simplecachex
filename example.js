@@ -8,7 +8,7 @@ var debug = true // display any warnings
 const opts = {
     silent:true, // do not show warnings on less critical errors
     // onlyWithCacheNamePrefix:true,
-    //smartUpdate:true, // write() method will perform update() check if data exists it will merge it
+    smartUpdate:true, // write() method will perform update() check if data exists it will merge it
     keepLast:true, // keep last uniq file
     expire:Infinity, //'10s', // {time/Format}  "1h" "2m" "30s" (h/m/s)
     cacheDir:path.join(__dirname, "./mycache"),
@@ -25,10 +25,10 @@ var data = [{  hello:'word' }]//,
 
 
 // NOTE callback option for additional save/merge options can only be used when smartUpdate is enabled
-// sc.write(data,cacheName,(source, newData)=>{
-//     // NOTE source is data from cache
-//     return [].concat(source,newData)
-// })
+sc.write(data,cacheName,(source, newData)=>{
+    // NOTE source is data from cache
+    return [].concat(source,newData)
+})
 
 // sc.write(data,cacheName)
 

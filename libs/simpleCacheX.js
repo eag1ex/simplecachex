@@ -375,10 +375,12 @@ module.exports = () => {
                 }
                 if(!isFunction(cb)) merged = merge(sourceData.data, newData) || {}
                 if (__internal ) return {merged, updatePath:sourceData.path}
-                else if(!__internal){           
+                if(!__internal){           
                     let done = this.write( merged,cacheName,null,null,)     
                     if (done) return merged
                 }
+
+                return merged
             }
 
             if (isArray(sourceData.data) && isArray(newData)) {
@@ -393,12 +395,14 @@ module.exports = () => {
                 } 
                 if(!isFunction(cb) ) merged = [].concat(sourceData.data,newData )
                 if (__internal) return {merged, updatePath:sourceData.path}
-                else if (!__internal){
+                if (!__internal){
    
                     let done = this.write( merged,cacheName,null,true)
                     
                     if (done) return merged
                 }
+                
+                return merged
 
             } else {
                 warn(`can only update/merge cache data that is of equal type!`)

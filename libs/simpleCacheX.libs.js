@@ -1,20 +1,17 @@
 
 module.exports = () => {
     const fs = require('fs')
-    const { isString, isNumber, uniqBy } = require('lodash')
+    const {  uniqBy } = require('lodash')
     const path = require('path')
     const moment = require('moment')
-    const { log, warn, onerror,copy,attention} = require('x-utils-es/umd')
+    const { log, warn, onerror,isString, isNumber,} = require('x-utils-es/umd')
     return class Libs {
         constructor(opts = {}, debug = false) {
             this.debug = debug
            
             // NOTE should be called in head of constructor
             this._presets(opts)
-            if(this.debug){
 
-                // attention()
-            }
         }
 
         _presets(opts) {
@@ -422,6 +419,7 @@ module.exports = () => {
         findMatch(fileName, smartUpdate) {
 
             let testFileName = fileName
+
             if(testFileName.indexOf(this.cacheName)===0) testFileName = testFileName.replace(this.cacheName+'_','')
 
             if (this.errHandler(testFileName, 'scanFind')) return ''

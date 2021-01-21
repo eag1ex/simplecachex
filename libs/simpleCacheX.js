@@ -11,9 +11,9 @@
 module.exports = () => {
 
     const fs = require('fs')
-    const { merge, isEmpty, isFunction } = require('lodash')
+    const { merge } = require('lodash')
     const path = require('path')
-    const { log, warn, onerror, isArray, isObject, isFalsy } = require('x-utils-es/umd')
+    const { log, warn, onerror, isArray, isObject, isFalsy,isEmpty, isFunction } = require('x-utils-es/umd')
     const Libs = require('./simpleCacheX.libs')()
 
     class SimpleCacheX extends Libs {
@@ -50,11 +50,12 @@ module.exports = () => {
                         // add backward compatible support
                         if (fileName.indexOf(this.cacheName + '_') === 0 && !this.onlyWithCacheNamePrefix) {
                             fileName = null
-                        } else fileName = fileName.split('_')[0]
+                        } else if(fileName.indexOf(this.cacheName + '_') !== 0 ) fileName = fileName.split('_')[0]
 
                     }
 
                     if(fileName){
+                     
                         let d = this.load(fileName, undefined,undefined,true)
                         allCache[fileName] = d
                     }               
@@ -89,13 +90,23 @@ module.exports = () => {
          */
         write(data, cacheName = '', cb, __internal = false) {
 
-            if(!this.preValid(cacheName,'write') && !__internal){
-                return false
+            if( !__internal){
+                if(!this.preValid(cacheName,'write')){
+                    return false
+                }
             }
+            
+            let testCacheName = cacheName
 
-            if (this.errHandler(cacheName, 'write')) return false
+            if(__internal){
+                if(testCacheName.indexOf(this.cacheName+'_')===0){
+                    testCacheName = testCacheName.replace(this.cacheName+'_','')
+                }           
+            }
+            
+            if (this.errHandler(testCacheName, 'write')) return false
 
-            if (this.onlyWithCacheNamePrefix) {
+            if (this.onlyWithCacheNamePrefix && cacheName.indexOf(this.cacheName+'_')!==0) {
                 cacheName = this.cacheName + "_" + cacheName
             }
 
@@ -109,6 +120,7 @@ module.exports = () => {
                 if (this.debug) onerror(`[write] cannot write data because its neither array, or object`)
                 return false
             }
+
 
             // NOTE only delete files by limit when calling `write` method directly and  `autoDeleteLimit` is larger then 0
             this.fileLimit(this.autoDeleteLimit, true)
@@ -260,9 +272,11 @@ module.exports = () => {
          * @returns updated cacheName/data or false
          */
         update(newData,cacheName, cb) {
+
             if(!this.preValid(cacheName,'update')){
                 return null
             }
+
             if (this.errHandler(cacheName, 'update')) return null
 
             if (isFalsy(newData)) {
@@ -277,7 +291,6 @@ module.exports = () => {
             if (this.smartUpdate) {
                 if (this.debug) log(`[update] if you want to use update(), disable smartUpdate option, waste of resources!`)
             }
-
             return this._combineData(cacheName, newData, ( isFunction(cb) ? cb:null ) , false)
         }
 
@@ -308,7 +321,12 @@ module.exports = () => {
                 cacheName = this.cacheName+ "_"+cacheName
             }
 
+            if(!this.onlyWithCacheNamePrefix && cacheName.indexOf(this.cacheName+'_')!==0){
+                cacheName = cacheName.replace(this.cacheName+'_','')
+            }
+
             try {
+
                 let foundFile = this.findMatch(cacheName,smartUpdate)
                 if (!foundFile) {
                     if (this.debug && !smartUpdate) log(`${cacheName} file not found, or expired`)
@@ -339,7 +357,9 @@ module.exports = () => {
          * @returns merged data or null
         */
         _combineData(cacheName, newData, cb, __internal = true, smartUpdate=null) {
+        
             let sourceData = this.load(cacheName,smartUpdate, true,true)
+
             if (isEmpty(sourceData.data)) return {}
 
             if (isObject(sourceData.data) && isObject(newData)) {
@@ -355,8 +375,8 @@ module.exports = () => {
                 }
                 if(!isFunction(cb)) merged = merge(sourceData.data, newData) || {}
                 if (__internal ) return {merged, updatePath:sourceData.path}
-                else if(!__internal){
-                    let done = this.write( merged,cacheName,null,null)
+                else if(!__internal){           
+                    let done = this.write( merged,cacheName,null,null,)     
                     if (done) return merged
                 }
             }
@@ -374,7 +394,9 @@ module.exports = () => {
                 if(!isFunction(cb) ) merged = [].concat(sourceData.data,newData )
                 if (__internal) return {merged, updatePath:sourceData.path}
                 else if (!__internal){
-                    let done = this.write( merged,cacheName,null,null)
+   
+                    let done = this.write( merged,cacheName,null,true)
+                    
                     if (done) return merged
                 }
 

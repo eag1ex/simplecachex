@@ -8,6 +8,7 @@
 
 ##### Methods
 * `instance opts`:
+    -`onlyWithCacheNamePrefix:boolean`: if there are other files in the cache dir you provided, only those with the `sc_` will be listed and used for future updates. (backward compatible option) - means that if we already have files with the prefix `sc_` but running with the option off those files will be handled and ignored from listing
    - `smartUpdate:boolean`: skips unnecessary call to update(), will perform check of data, and do merge on the fly
    - `keepLast:boolean`: will always keep latest file regardless of expiry or autoDeleteLimit
    - `expire:string`: valid format 1h, 20m, 59s (h/m/s)
@@ -40,6 +41,8 @@ const SimpleCache = require('./simpleCacheX')()
 var debug = true // display any warnings
 
 const opts = {
+    // silent:true, // ommit soft warnings regardless of debug enabled
+    //onlyWithCacheNamePrefix:true, // only read/write/list files with new prefix: `sc_`
     // smartUpdate:true,
     // keepLast:true, // always keep last file
     autoDeleteLimit: 15, // auto delete files by specified limit

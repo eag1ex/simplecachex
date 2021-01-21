@@ -13,7 +13,7 @@
     "paths": {
       "*": ["node_modules/*"]
     },
-    "include": ["libs"],
+    "include": ["./libs"],
     "exclude": ["node_modules", "tmp"]
   }
   

@@ -26,44 +26,6 @@ module.exports = () => {
             return this._expireIn
         }
 
-        /**
-         * @removeExpired
-         * * removes expired files
-         */
-        removeExpired() {
-
-            try {
-                let dir = this.listFiles
-                const uniqFilesByTimestamp = this.allUniqFiles.map(n => n.timestamp)
-
-                let inxLessThen = (inx) => this.autoDeleteLimit > inx + 1
-
-                dir.forEach((file, inx) => {
-
-                    if (inxLessThen(inx)) return
-
-                    let timestamp = this.fileTimeStamp(file)
-                    if (timestamp !== null) {
-                        let curTime = new Date().getTime()
-
-                        let keepLast = this.keepLast && this.fileListTimes[0] ? this.fileListTimes[0] || '' : ''
-                        keepLast = keepLast && timestamp === keepLast
-                        if (keepLast) return
-
-                        // means only test if autoDeleteLimit is not set,and keepLast is set
-                        let unq = uniqFilesByTimestamp.indexOf(timestamp) !== -1 && this.keepLast && this.autoDeleteLimit < 1
-
-                        if (unq) return
-                        if (curTime >= timestamp) {
-                            this.removeIt(file)
-                        }
-                    }
-                })
-            } catch (err) {
-                if (this.debug) onerror(`[removeExpired]`, err.toString())
-            }
-
-        }
 
         /**
          * @getAll
@@ -72,13 +34,30 @@ module.exports = () => {
         getAll() {
             let allCache = {}
             try {
+                this.fileLimit(this.autoDeleteLimit, true)
                 // latest first
                 let dir = this.listFiles
 
                 const load = (file) => {
-                    let fileName = file.split('_')[0]
-                    let d = this.load(fileName)
-                    allCache[fileName] = d
+                    let fileName = file
+                    if (this.onlyWithCacheNamePrefix) {
+                        if (fileName.indexOf(this.cacheName + '_') === 0) {
+                            fileName = fileName.replace(this.cacheName + '_', '')
+                            fileName = fileName.split('_')[0]
+                        }
+
+                    } else {
+                        // add backward compatible support
+                        if (fileName.indexOf(this.cacheName + '_') === 0 && !this.onlyWithCacheNamePrefix) {
+                            fileName = null
+                        } else fileName = fileName.split('_')[0]
+
+                    }
+
+                    if(fileName){
+                        let d = this.load(fileName, undefined,undefined,true)
+                        allCache[fileName] = d
+                    }               
                 }
 
                 dir.forEach((file, inx) => {
@@ -110,7 +89,15 @@ module.exports = () => {
          */
         write(data, cacheName = '', cb, __internal = false) {
 
+            if(!this.preValid(cacheName,'write') && !__internal){
+                return false
+            }
+
             if (this.errHandler(cacheName, 'write')) return false
+
+            if (this.onlyWithCacheNamePrefix) {
+                cacheName = this.cacheName + "_" + cacheName
+            }
 
             if (isFalsy(data)) {
                 if (this.debug) warn('[write] cannot set falsy values')
@@ -125,8 +112,12 @@ module.exports = () => {
 
             // NOTE only delete files by limit when calling `write` method directly and  `autoDeleteLimit` is larger then 0
             this.fileLimit(this.autoDeleteLimit, true)
-            let newFile = path.join(this.cacheDir, 
-                                    `${cacheName}_${this.cachePrefix}_${this.expire}.json`) || ''
+            let newFile
+
+            newFile = path.join(this.cacheDir, 
+                    `${cacheName}_${this.cachePrefix}_${this.expire}.json`) || ''
+
+
 
             /** 
              * - update or write to existing file if keepLast is set that file still exists, or keep creating new file
@@ -135,8 +126,29 @@ module.exports = () => {
                 if (this.keepLast) {
                     let firstFile = this.listFiles[0]
                     if (firstFile) {
+                         
+
                         let firstFileName = firstFile.split(this.cachePrefix)[0].replace(/_/g, '') || ''
-                        if ((firstFileName.indexOf(cacheName) === 0 && firstFileName.length === cacheName.length) && (cacheName && firstFileName)) {
+                        if(this.onlyWithCacheNamePrefix){
+                            firstFileName = this.cacheName + '_'+ firstFileName
+                        } 
+
+                        // add back compatible support
+                        let cacheNameWithNamePrefix = this.cacheName +'_'+cacheName
+
+                        // NOTE this means when we do nto use onlyWithCacheNamePrefix but there are already files with that prefix, lets look for them also
+
+                        let firstMatched =  (firstFileName.indexOf(cacheName) === 0 || firstFileName.indexOf(cacheNameWithNamePrefix) ===0) !==false
+
+                        let firstFileNameWith = (firstFileName.length === cacheName.length || firstFileName.length === (this.cacheName +'_'+cacheName).length) !==false
+
+                        if ((firstMatched && firstFileNameWith ) && (cacheName && firstFileName)) {
+
+                           
+                            if(firstFile.indexOf(this.cacheName+'_')!==0 && this.onlyWithCacheNamePrefix){
+                                firstFile = this.cacheName + '_' + firstFile
+                            }
+                            
                             let testFile = path.join(this.cacheDir, firstFile)
                             if (fs.existsSync(testFile)) {
                                 newFile = testFile
@@ -225,7 +237,18 @@ module.exports = () => {
         */
         exists(cacheName = '') {
             if (!cacheName) return false
-            return !isFalsy(this.load(cacheName))
+
+            if(!this.preValid(cacheName,'exists')){
+                return false
+            }
+
+            if (this.errHandler(cacheName, 'exists')) return false
+
+            if(this.onlyWithCacheNamePrefix){
+                cacheName = this.cacheName+ "_"+cacheName
+            }
+
+            return !isFalsy(this.load(cacheName,undefined,undefined,true))
         }
 
 
@@ -237,10 +260,18 @@ module.exports = () => {
          * @returns updated cacheName/data or false
          */
         update(newData,cacheName, cb) {
+            if(!this.preValid(cacheName,'update')){
+                return null
+            }
             if (this.errHandler(cacheName, 'update')) return null
+
             if (isFalsy(newData)) {
                 if (this.debug) warn('[update] cannot set falsy values')
                 return null
+            }
+
+            if(this.onlyWithCacheNamePrefix){
+                cacheName = this.cacheName+ "_"+cacheName
             }
 
             if (this.smartUpdate) {
@@ -256,9 +287,26 @@ module.exports = () => {
          * load available data that hasn't expired
          * * return data
          */
-        load(cacheName, smartUpdate, __full) {
+        load(cacheName, smartUpdate, __full, __internal) {
 
-            if (this.errHandler(cacheName, 'load')) return false
+            if(!__internal){
+                if(!this.preValid(cacheName,'update')){
+                    return null
+                }
+            }
+
+            if(!__internal){
+                if (this.errHandler(cacheName, 'load')) return false
+            }
+            
+
+            // if(this.onlyWithCacheNamePrefix && !__internal){
+            //     cacheName = this.cacheName+ "_"+cacheName
+            // }
+
+            if(this.onlyWithCacheNamePrefix && cacheName.indexOf(this.cacheName+'_')!==0){
+                cacheName = this.cacheName+ "_"+cacheName
+            }
 
             try {
                 let foundFile = this.findMatch(cacheName,smartUpdate)
@@ -278,7 +326,7 @@ module.exports = () => {
                 }: d2
                
             } catch (err) {
-                if (this.debug) onerror(`${cacheName} file not found, or expired`)
+                if (this.debug && !this.silent) onerror(`${cacheName} file not found, or expired`)
                 return __full ? {}: null    
             }
         }
@@ -291,7 +339,7 @@ module.exports = () => {
          * @returns merged data or null
         */
         _combineData(cacheName, newData, cb, __internal = true, smartUpdate=null) {
-            let sourceData = this.load(cacheName,smartUpdate, true)
+            let sourceData = this.load(cacheName,smartUpdate, true,true)
             if (isEmpty(sourceData.data)) return {}
 
             if (isObject(sourceData.data) && isObject(newData)) {

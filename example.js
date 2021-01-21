@@ -6,19 +6,21 @@ const path = require('path')
 var debug = true // display any warnings
 
 const opts = {
+    silent:true, // do not show warnings on less critical errors
+    //onlyWithCacheNamePrefix:true,
     smartUpdate:true, // write() method will perform update() check if data exists it will merge it
     keepLast:true, // keep last uniq file
     expire:Infinity, //'10s', // {time/Format}  "1h" "2m" "30s" (h/m/s)
     cacheDir:path.join(__dirname, "./mycache"),
-    autoDeleteLimit:5 // NOTE regardless of expire only keep up to number set on cacheDir
+    autoDeleteLimit:1 // NOTE regardless of expire only keep up to number set on cacheDir
 }
 
 const sc = new SimpleCache(opts, debug)
 
 //sc.fileLimit(2) // NOTE direct call is ignored when autoDeleteLimit>0
 
-var cacheName = 'job-ca' // has format restriction validation, enable `debug to see any errors or warnings`
-var data = [{ bankName: 'Swiss Bank', assets: 3 }]//,
+var cacheName = 'job-ca-3' // has format restriction validation, enable `debug to see any errors or warnings`
+var data = [{  hello:'word' }]//,
     //{ bankName: 'Deutsche Bank 9', assets: 10000 }] // 
 
 

@@ -4,19 +4,31 @@ module.exports = () => {
     const { isString, isNumber, uniqBy } = require('lodash')
     const path = require('path')
     const moment = require('moment')
-    const { log, warn, onerror} = require('x-utils-es/umd')
+    const { log, warn, onerror,copy,attention} = require('x-utils-es/umd')
     return class Libs {
         constructor(opts = {}, debug = false) {
             this.debug = debug
            
             // NOTE should be called in head of constructor
             this._presets(opts)
+            if(this.debug){
+
+                // attention()
+            }
         }
 
         _presets(opts) {
+
+            /** enable to only read list and write to files that have cacheName prefix available */
+            this.onlyWithCacheNamePrefix = opts.onlyWithCacheNamePrefix || false
+
+            // disable showing warnings on lest critical errors
+            this.silent = opts.silent || false
+
           //TODO  this.routeFile = null // helps us where to store our next file, especially when using `toSubDir()`
             this.d = null // temp data holder
             // this._expire = 1 // default, or in hours >  (1, 3, 5, 0.5)
+      
             this.keepLast = opts.keepLast || false // allow for latest cache file to remain, and not expire
             this._cacheDir = opts.cacheDir || null // or use default instead
             this.expire = opts.expire || this.defaultTime.str
@@ -39,6 +51,47 @@ module.exports = () => {
             return this._expire
         }
 
+        
+        /**
+         * @removeExpired
+         * * removes expired files
+         */
+        removeExpired() {
+
+            try {
+                let dir = this.listFiles
+                const uniqFilesByTimestamp = this.allUniqFiles.map(n => n.timestamp)
+
+                let inxLessThen = (inx) => this.autoDeleteLimit > inx + 1
+
+                dir.forEach((file, inx) => {
+
+                    if (inxLessThen(inx)) return
+
+                    let timestamp = this.fileTimeStamp(file)
+                    if (timestamp !== null) {
+                        let curTime = new Date().getTime()
+
+                        let keepLast = this.keepLast && this.fileListTimes[0] ? this.fileListTimes[0] || '' : ''
+                        keepLast = keepLast && timestamp === keepLast
+                        if (keepLast) return
+
+                        // means only test if autoDeleteLimit is not set,and keepLast is set
+                        let unq = uniqFilesByTimestamp.indexOf(timestamp) !== -1 && this.keepLast && this.autoDeleteLimit < 1
+
+                        if (unq) return
+                        if (curTime >= timestamp) {
+                            this.removeIt(file)
+                        }
+                    }
+                })
+            } catch (err) {
+                if (this.debug) onerror(`[removeExpired]`, err.toString())
+            }
+
+        }
+
+
         set expire(v) {
             if (this._expire) return
             const newTime = this.setDate(v)
@@ -60,15 +113,25 @@ module.exports = () => {
         get listFiles() {
             return (fs.readdirSync(this.cacheDir) || [])
                 .map(n => {
+                    if(!n) return null
                     
-                    if(n && (n ||'').indexOf('_'+this.cachePrefix+'_')===-1 ){
-                        if(this.debug) warn(`[listFiles]`, `file: { ${n} } has invalid path name, ignoring`)
-                        return null
-                    }
-
                     let dir = path.join(this.cacheDir, n)
                     if (fs.lstatSync(dir).isDirectory()) return null
-                    else return n
+
+                    if (this.onlyWithCacheNamePrefix) {
+                        if (n.indexOf(this.cacheName + '_') === 0) {
+                            // because we may have other files in cache dir so disable soft warnings
+                            // if(this.debug) warn(`[listFiles][onlyWithCacheNamePrefix]`, `file: { ${n} } no cacheName found`)
+                            return n
+                        } else return null
+                    }
+
+                    if (n && (n || '').indexOf('_' + this.cachePrefix + '_') === -1) {
+                        // because we may have other files in cache dir so disable soft warnings
+                      //  if (this.debug) warn(`[listFiles]`, `file: { ${n} } has invalid path name, ignoring`)
+                        return null
+                    } else return n
+
                 }).filter(n => !!n)
                 .sort((a, b) => this.fileTimeStamp(b) - this.fileTimeStamp(a))
         }
@@ -112,6 +175,14 @@ module.exports = () => {
 
         get defaultTime() {
             return { time: 1, format: 'h', str: '1h' }
+        }
+
+        /** 
+         * - in case we specify a folder that shares our cache folder
+         * - assigning cacheName will only render files that include {cacheName} prefix 
+        */
+        get cacheName(){
+            return 'sc'
         }
 
         /** 
@@ -181,12 +252,13 @@ module.exports = () => {
          */
         fileLimit(limit = 0, override = null) {
             if (this.autoDeleteLimit > 0 && !override) {
-                if (this.debug) warn(`[fileLimit] cannot use this method directly when autoDeleteLimit>0`)
+                if (this.debug && !this.silent) warn(`[fileLimit] cannot use this method directly when autoDeleteLimit>0`)
                 return this
             }
+            
             if (limit < 1) return this
             let dir = this.listFiles
-
+       
             let timeList = dir.map((file, inx) => {
                 let timestamp = this.fileTimeStamp(file)
                 if (timestamp !== null) return timestamp
@@ -230,7 +302,7 @@ module.exports = () => {
         */
         fileTimeStamp(file) {
             let timestamp = file.split('_')
-            timestamp = timestamp[timestamp.length - 1]
+            timestamp = timestamp[timestamp.length - 1] // NOTE timestamp should be appended in end of each file
             timestamp = timestamp.replace('.json', '')
             timestamp = Number(timestamp)
             return isNumber(timestamp) ? timestamp : null
@@ -242,7 +314,7 @@ module.exports = () => {
                 fs.unlinkSync(fileFilePath)
                 return true
             } catch (err) {
-                if (this.debug) onerror(`[removeIt] file not removed`)
+                if (this.debug && !this.silent) onerror(`[removeIt] file not removed`)
                 // handle the error
                 return false
             }
@@ -251,12 +323,16 @@ module.exports = () => {
 
         /** 
          * @allUniqFiles
-         * - return all files that are uniq vy fname_
+         * - return all files that are uniq by fname_
          * @returns [{fname, timestamp},...]
         */
         get allUniqFiles() {
             return uniqBy(this.listFiles.map(n => {
-                let [fname, otherPart] = n.split(this.cachePrefix)
+                let fname,otherPart
+
+                if(this.onlyWithCacheNamePrefix) [fname, otherPart] = n.split(this.cacheName+'_')
+                else [fname, otherPart] = n.split(this.cachePrefix)
+
                 let timestamp = otherPart.replace(/_/g, '').replace('.json', '')
                 if (Number(timestamp) > 0) {
                     return { fname, timestamp: Number(timestamp) }
@@ -274,11 +350,32 @@ module.exports = () => {
             return this.listFiles.map(n => this.fileTimeStamp(n)).sort((a, b) => b - a)
         }
 
+        /** 
+         * - executed before errHandler
+         * - to check for this.cacheName reserved name 
+        */
+        preValid(cacheName,_where){
+             // test reserved name
+             if(cacheName.indexOf(this.cacheName+'_')===0){
+                if (this.debug) onerror('[preValid]',`${_where} cacheName, or part of it is reserved:${this.cacheName}`)
+                return false
+            }
+           return true
+        }
+
         errHandler(cacheName, _where) {
             if (!cacheName) {
                 if (this.debug) onerror(`${_where} cacheName must be set`)
                 return true
             }
+            
+            // test reserved name
+            if(cacheName.indexOf(this.cacheName+'_')===0){
+                if (this.debug) onerror('[errHandler]',`${_where} cacheName, or part of it is reserved:${this.cacheName}`)
+                return true
+            }
+           
+
             if (!isString(cacheName)) {
                 if (this.debug) onerror(`${_where} cacheName must be a string`)
                 return true
@@ -292,7 +389,7 @@ module.exports = () => {
                 return true
             }
             if (cacheName.length < 3) {
-                if (this.debug) onerror(`${_where} cacheName must be longer then 3`)
+                if (this.debug) onerror(`${_where} cacheName must be longer then 3`,cacheName)
                 return true
             }
 
@@ -323,19 +420,25 @@ module.exports = () => {
          * return fileName, excluding file extension
          */
         findMatch(fileName, smartUpdate) {
-            if (this.errHandler(fileName, 'scanFind')) return ''
 
+            let testFileName = fileName
+            if(testFileName.indexOf(this.cacheName)===0) testFileName = testFileName.replace(this.cacheName+'_','')
+
+            if (this.errHandler(testFileName, 'scanFind')) return ''
+      
             let dir = this.listFiles     
             let exectMatch = (origin,source)=>{
                 let o = origin.split('_'+this.cachePrefix+'_')[0]
+                
+                //if(this.onlyWithCacheNamePrefix)  o = origin.split(this.cacheName+"_")[0]
+   
                 return o=== source && o
             }  
 
             let found = dir.reduce((n, el) => {
-
                 if (exectMatch(el,fileName )) {
                     let ell = el.split('.json')[0]
-                    let joint = '_'+this.cachePrefix +'_'
+                    let joint = '_'+this.cachePrefix +'_' // NOTE we can add same condition as in exectMatch() above, but all files already matched by that condition, and all should include _cache_ word as well
                     let timestamp = ell.split(joint)
                     timestamp = timestamp[timestamp.length - 1]
                     if (timestamp) n.push([ell, Number(timestamp)])
@@ -347,7 +450,7 @@ module.exports = () => {
                 let format = found[0][0]
                 return format
             } else {
-                if (this.debug && !smartUpdate) onerror(`${fileName} not found in: ${this.cacheDir}`)
+                if (this.debug && !smartUpdate && !this.silent) onerror(`${fileName} not found in: ${this.cacheDir}`)
                 return ''
             }
         }
